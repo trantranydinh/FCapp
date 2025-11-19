@@ -1,6 +1,6 @@
 import Head from "next/head";
-import Layout from "@/components/Layout";
-import { useMarketSentiment } from "@/hooks/useDashboardData";
+import Layout from "../components/Layout";
+import { useMarketSentiment } from "../hooks/useDashboardData";
 
 const MarketInsightsPage = () => {
   const { data } = useMarketSentiment();
