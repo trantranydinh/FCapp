@@ -1,8 +1,8 @@
 import Head from "next/head";
 import { useState } from "react";
-import Layout from "@/components/Layout";
-import NewsList from "@/components/NewsList";
-import { useNewsSummary } from "@/hooks/useDashboardData";
+import Layout from "../components/Layout";
+import NewsList from "../components/NewsList";
+import { useNewsSummary } from "../hooks/useDashboardData";
 
 const NewsWatchPage = () => {
   const [limit, setLimit] = useState(5);

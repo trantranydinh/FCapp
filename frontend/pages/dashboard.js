@@ -1,11 +1,11 @@
 import Head from "next/head";
 import { useState } from "react";
-import Layout from "@/components/Layout";
-import KpiCard from "@/components/KpiCard";
-import PriceChart from "@/components/PriceChart";
-import NewsList from "@/components/NewsList";
-import FileUploadCard from "@/components/FileUploadCard";
-import { useDashboardOverview, useHistoricalData } from "@/hooks/useDashboardData";
+import Layout from "../components/Layout";
+import KpiCard from "../components/KpiCard";
+import PriceChart from "../components/PriceChart";
+import NewsList from "../components/NewsList";
+import FileUploadCard from "../components/FileUploadCard";
+import { useDashboardOverview, useHistoricalData } from "../hooks/useDashboardData";
 
 const formatCurrency = (value) => `$${Number(value || 0).toLocaleString()}`;
 

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import Layout from "@/components/Layout";
-import PriceChart from "@/components/PriceChart";
-import KpiCard from "@/components/KpiCard";
-import { api, handleError } from "@/lib/apiClient";
-import { useHistoricalData } from "@/hooks/useDashboardData";
+import Layout from "../components/Layout";
+import PriceChart from "../components/PriceChart";
+import KpiCard from "../components/KpiCard";
+import { api, handleError } from "../lib/apiClient";
+import { useHistoricalData } from "../hooks/useDashboardData";
 
 const PriceForecastPage = () => {
   const [forecast, setForecast] = useState(null);
