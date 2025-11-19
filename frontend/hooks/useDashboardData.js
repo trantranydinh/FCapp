@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { api, handleError } from "@/lib/apiClient";
+import { api, handleError } from "../lib/apiClient";
 
 const fetcher = async (url) => {
   try {

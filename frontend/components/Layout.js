@@ -24,17 +24,22 @@ const Layout = ({ title, children }) => (
           <Link
             key={item.href}
             href={item.href}
-            style={{
-              color: "#ffffff",
-              textDecoration: "none",
-              padding: "0.5rem",
-              borderRadius: "8px",
-              transition: "background 0.2s"
-            }}
-            onMouseEnter={(e) => e.target.style.background = "#991b1b"}
-            onMouseLeave={(e) => e.target.style.background = "transparent"}
+            style={{ textDecoration: "none" }}
           >
-            {item.label}
+            <span
+              style={{
+                display: "block",
+                color: "#ffffff",
+                padding: "0.5rem",
+                borderRadius: "8px",
+                transition: "background 0.2s",
+                cursor: "pointer"
+              }}
+              onMouseEnter={(e) => e.target.style.background = "#991b1b"}
+              onMouseLeave={(e) => e.target.style.background = "transparent"}
+            >
+              {item.label}
+            </span>
           </Link>
         ))}
       </nav>
