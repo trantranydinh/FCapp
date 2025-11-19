@@ -1,0 +1,21 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Install Python for ML models
+RUN apk add --no-cache python3 py3-pip
+
+# Install Python dependencies for ML models
+COPY ../ml-models/requirements.txt /ml-models/requirements.txt
+RUN pip3 install -r /ml-models/requirements.txt
+
+# Copy source code
+COPY . .
+
+EXPOSE 3001
+
+CMD ["npm", "run", "dev"]

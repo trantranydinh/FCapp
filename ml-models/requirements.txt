@@ -1,0 +1,17 @@
+# Python ML Dependencies
+
+# Data manipulation
+pandas==2.2.0
+numpy==1.26.3
+
+# Time series forecasting
+prophet==1.1.5
+statsmodels==0.14.1
+
+# Deep learning
+torch==2.2.0
+scikit-learn==1.4.0
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2024.1

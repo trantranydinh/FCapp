@@ -1,0 +1,11 @@
+{
+  "name": "@fcapp/shared",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "exports": {
+    "./types": "./types/index.ts",
+    "./utils": "./utils/index.ts",
+    "./config": "./config/index.ts"
+  }
+}
