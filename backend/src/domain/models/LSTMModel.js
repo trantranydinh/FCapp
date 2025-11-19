@@ -130,7 +130,19 @@ class LSTMModel {
   }
 
   /**
-   * Get model information
+   * Get model metadata (required by ModelRegistry interface)
+   */
+  getMetadata() {
+    return {
+      name: this.name,
+      version: '1.0.0',
+      type: this.type,
+      description: this.description
+    };
+  }
+
+  /**
+   * Get model information (backward compatibility)
    */
   getInfo() {
     return {
@@ -146,4 +158,5 @@ class LSTMModel {
   }
 }
 
-export default LSTMModel;
+// Export singleton instance (matching other models)
+export default new LSTMModel();

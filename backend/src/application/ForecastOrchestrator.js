@@ -10,7 +10,8 @@ import LSTMModel from '../domain/models/LSTMModel.js';
 
 class ForecastOrchestrator {
   constructor() {
-    this.lstmModel = new LSTMModel();
+    // LSTMModel is a singleton instance, not a class
+    this.lstmModel = LSTMModel;
   }
 
   /**
