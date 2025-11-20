@@ -1,10 +1,11 @@
 import Head from "next/head";
 import DashboardLayout from "../components/DashboardLayout";
 import KpiCardModern from "../components/KpiCardModern";
+import MarketHeatmap from "../components/MarketHeatmap";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { useMarketSentiment } from "../hooks/useDashboardData";
-import { TrendingUp, TrendingDown, Minus, BarChart3, Activity, AlertCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, BarChart3, Activity, AlertCircle, PieChart, ArrowRight } from "lucide-react";
 
 const MarketInsightsPage = () => {
   const { data } = useMarketSentiment();
@@ -49,84 +50,103 @@ const MarketInsightsPage = () => {
       </Head>
       <DashboardLayout title="Market Insights">
         <div className="space-y-6">
-          {/* Sentiment Overview KPIs */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <KpiCardModern
-              title="Overall Sentiment"
-              value={data?.overall_sentiment || "NEUTRAL"}
-              badge={getSentimentBadge(data?.overall_sentiment)}
-              icon={SentimentIcon}
-            />
 
-            <KpiCardModern
-              title="Sentiment Score"
-              value={data?.sentiment_score ? data.sentiment_score.toFixed(2) : "—"}
-              icon={BarChart3}
-            />
+          {/* Top Section: KPIs & Heatmap */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Left: KPIs */}
+            <div className="space-y-4">
+              <KpiCardModern
+                title="Overall Sentiment"
+                value={data?.overall_sentiment || "NEUTRAL"}
+                badge={getSentimentBadge(data?.overall_sentiment)}
+                icon={SentimentIcon}
+              />
 
-            <KpiCardModern
-              title="Confidence Level"
-              value={data ? `${confidencePercent}%` : "—"}
-              badge={
-                confidencePercent > 70
-                  ? { label: "High", variant: "success" }
-                  : confidencePercent > 50
-                  ? { label: "Medium", variant: "outline" }
-                  : { label: "Low", variant: "warning" }
-              }
-              icon={Activity}
-            />
+              <KpiCardModern
+                title="Sentiment Score"
+                value={data?.sentiment_score ? data.sentiment_score.toFixed(2) : "—"}
+                icon={BarChart3}
+              />
+
+              <KpiCardModern
+                title="Confidence Level"
+                value={data ? `${confidencePercent}%` : "—"}
+                badge={
+                  confidencePercent > 70
+                    ? { label: "High", variant: "success" }
+                    : confidencePercent > 50
+                      ? { label: "Medium", variant: "outline" }
+                      : { label: "Low", variant: "warning" }
+                }
+                icon={Activity}
+              />
+            </div>
+
+            {/* Right: Market Heatmap */}
+            <Card className="xl:col-span-2 glass-card border-none">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="h-5 w-5 text-primary" />
+                  Sector Performance Heatmap
+                </CardTitle>
+                <CardDescription>Real-time volume and price change across cashew sectors</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <MarketHeatmap />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Market Insights Feed */}
-          <Card>
+          <Card className="glass-card border-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5" />
-                Market Intelligence
+                <AlertCircle className="h-5 w-5 text-primary" />
+                AI Market Intelligence
               </CardTitle>
               <CardDescription>
-                AI-generated insights and analysis from market data
+                Deep-dive analysis generated from global trade data and news sources
               </CardDescription>
             </CardHeader>
             <CardContent>
               {data?.insights && data.insights.length > 0 ? (
-                <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   {data.insights.map((insight, index) => (
                     <div
                       key={insight.section || index}
-                      className="rounded-lg border bg-card p-4 transition-colors hover:bg-accent/50"
+                      className="rounded-xl border border-border/50 bg-white/50 dark:bg-slate-900/50 p-5 transition-all hover:bg-white/80 dark:hover:bg-slate-900/80 hover:shadow-md hover:border-primary/20 group flex flex-col h-full"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold leading-tight">
-                              {insight.headline}
-                            </h3>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold leading-tight text-lg group-hover:text-primary transition-colors">
+                            {insight.headline}
+                          </h3>
+                          <Badge variant="outline" className="text-xs bg-background/50 backdrop-blur-sm">
                             {insight.section}
                           </Badge>
-                          <p className="text-sm text-muted-foreground leading-relaxed">
-                            {insight.summary}
-                          </p>
                         </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {insight.summary}
+                        </p>
                       </div>
 
                       {/* Metrics Footer */}
-                      <div className="mt-3 flex items-center gap-4 border-t pt-3 text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">Impact:</span>
-                          <Badge variant={getImpactVariant(insight.impact_score)}>
-                            {insight.impact_score?.toFixed(1) || "—"}
-                          </Badge>
+                      <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3 text-xs">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground font-medium">Impact:</span>
+                            <Badge variant={getImpactVariant(insight.impact_score)} className="shadow-sm h-5">
+                              {insight.impact_score?.toFixed(1) || "—"}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground font-medium">Confidence:</span>
+                            <span className="font-bold text-primary">
+                              {Math.round((insight.confidence || 0) * 100)}%
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">Confidence:</span>
-                          <span className="font-medium">
-                            {Math.round((insight.confidence || 0) * 100)}%
-                          </span>
-                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100" />
                       </div>
                     </div>
                   ))}
