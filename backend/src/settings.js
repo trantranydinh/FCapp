@@ -17,5 +17,16 @@ export const settings = {
   openAiKey: process.env.OPENAI_API_KEY || "",
   claudeKey: process.env.ANTHROPIC_API_KEY || "",
   llmMaxCallsPerMinute: Number(process.env.LLM_MAX_CALLS_PER_MIN || 5),
-  llmMaxCallsPerDay: Number(process.env.LLM_MAX_CALLS_PER_DAY || 50)
+  llmMaxCallsPerDay: Number(process.env.LLM_MAX_CALLS_PER_DAY || 50),
+
+  // Database Configuration
+  dbType: process.env.DB_TYPE || "none", // postgresql, mysql, sqlite, mongodb, none
+  dbHost: process.env.DB_HOST || "localhost",
+  dbPort: Number(process.env.DB_PORT || 5432),
+  dbName: process.env.DB_NAME || "cashew_forecast",
+  dbUser: process.env.DB_USER || "",
+  dbPassword: process.env.DB_PASSWORD || "",
+  dbSSL: process.env.DB_SSL === "true",
+  dbConnectionString: process.env.DB_CONNECTION_STRING || "",
+  dbPath: process.env.DB_PATH || "./data/cashew.db" // For SQLite
 };

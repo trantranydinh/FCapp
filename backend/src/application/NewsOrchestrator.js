@@ -1,18 +1,21 @@
 /**
- * APPLICATION LAYER: News Orchestrator
+ * APPLICATION LAYER: News Orchestrator (Enhanced)
  *
  * Responsibility: Coordinate news data retrieval and AI enhancement
- * Dependencies: Infrastructure services (JSONCache, LLMProvider)
+ * Dependencies: Infrastructure services (JSONCache, LLMProvider, NewsCrawler)
  *
- * Principles:
- * - Provide fallback data when no news available
- * - Optional AI enhancement for news insights
+ * Features:
+ * - Keyword-based news crawling
+ * - AI enhancement for news insights
  * - Graceful degradation when AI unavailable
  */
 
 import path from 'path';
 import fs from 'fs-extra';
 import llmProvider from '../infrastructure/llm/LLMProvider.js';
+import newsCrawler from '../infrastructure/data/NewsCrawler.js';
+import databaseAdapter from '../infrastructure/db/DatabaseAdapter.js';
+import { settings } from '../settings.js';
 
 class NewsOrchestrator {
   constructor() {
@@ -56,47 +59,9 @@ class NewsOrchestrator {
   }
 
   /**
-   * Configure news file path
-   *
-   * @param {string} filePath - Path to news JSON file
-   */
-  setNewsFilePath(filePath) {
-    this.newsFilePath = filePath;
-  }
-
-  // ========== PRIVATE HELPER METHODS ==========
-
-  /**
-   * Load news items from file or return fallback
-   * @private
-   */
-  async _loadNewsItems() {
-    try {
-      const exists = await fs.pathExists(this.newsFilePath);
-
-      if (!exists) {
-        console.log('[NewsOrchestrator] News file not found, using fallback data');
-        return this._getFallbackNews();
-      }
-
-      const raw = await fs.readFile(this.newsFilePath, 'utf-8');
-      const parsed = JSON.parse(raw);
-
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        console.log('[NewsOrchestrator] Invalid news data, using fallback');
-        return this._getFallbackNews();
-      }
-
-      return parsed;
-
-    } catch (error) {
-      console.warn('[NewsOrchestrator] Failed to load news file:', error.message);
-      return this._getFallbackNews();
-    }
-  }
-
-  /**
-   * Get fallback news when no data available
+   * Refresh news data by crawling with optional keywords
+   * 
+   * @param {Object} options - Crawl options
    * @private
    */
   _getFallbackNews() {
