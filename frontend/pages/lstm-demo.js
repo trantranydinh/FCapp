@@ -1,6 +1,12 @@
 import { useState } from 'react';
-import Layout from '../components/Layout';
+import Head from 'next/head';
+import DashboardLayout from '../components/DashboardLayout';
 import PriceChart from '../components/PriceChart';
+import KpiCardModern from '../components/KpiCardModern';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { DollarSign, TrendingUp, TrendingDown, Activity, Cpu, Loader2, AlertCircle, ChevronDown } from 'lucide-react';
 
 /**
  * LSTM Demo Page
@@ -113,190 +119,222 @@ export default function LSTMDemo() {
     };
   };
 
+  const TrendIcon = forecast?.trendLabel === 'UP' ? TrendingUp : forecast?.trendLabel === 'DOWN' ? TrendingDown : Activity;
+  const trendBadge = forecast?.trendLabel === 'UP'
+    ? { label: 'Bullish', variant: 'success' }
+    : forecast?.trendLabel === 'DOWN'
+    ? { label: 'Bearish', variant: 'destructive' }
+    : { label: 'Neutral', variant: 'outline' };
+
   return (
-    <Layout>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '10px' }}>
-          LSTM Forecast Demo
-        </h1>
-        <p style={{ color: '#666', marginBottom: '30px' }}>
-          Test the LSTM Golden Path: Infrastructure → Domain → Application → API → Frontend
-        </p>
+    <>
+      <Head>
+        <title>LSTM Demo | Cashew Forecast</title>
+      </Head>
+      <DashboardLayout title="LSTM Demo">
+        <div className="space-y-6">
+          {/* Info Banner */}
+          <Card className="bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Cpu className="h-6 w-6 text-emerald-600" />
+                <h2 className="text-lg font-semibold text-emerald-900">
+                  LSTM Neural Network Forecasting
+                </h2>
+              </div>
+              <p className="text-sm text-emerald-700">
+                Test the complete LSTM Golden Path: Frontend → API → Application → Domain → Infrastructure → Python LSTM
+              </p>
+            </CardContent>
+          </Card>
 
-        {/* Controls */}
-        <div style={{
-          background: 'white',
-          padding: '20px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          marginBottom: '20px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                Forecast Days:
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="90"
-                value={forecastDays}
-                onChange={(e) => setForecastDays(Number(e.target.value))}
-                style={{
-                  padding: '8px 12px',
-                  border: '2px solid #e5e7eb',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  width: '100px'
-                }}
-                disabled={loading}
-              />
-            </div>
+          {/* Controls */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Cpu className="h-5 w-5" />
+                Forecast Configuration
+              </CardTitle>
+              <CardDescription>
+                Configure and run LSTM-based price predictions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="forecastDays" className="text-sm font-medium">
+                    Forecast Days
+                  </label>
+                  <input
+                    id="forecastDays"
+                    type="number"
+                    min="1"
+                    max="90"
+                    value={forecastDays}
+                    onChange={(e) => setForecastDays(Number(e.target.value))}
+                    disabled={loading}
+                    className="flex h-10 w-24 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
 
-            <button
-              onClick={runLSTMForecast}
-              disabled={loading}
-              style={{
-                padding: '10px 24px',
-                background: loading ? '#9ca3af' : '#dc2626',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                marginTop: 'auto'
-              }}
-            >
-              {loading ? 'Running LSTM...' : 'Run LSTM Forecast'}
-            </button>
-          </div>
+                <Button
+                  onClick={runLSTMForecast}
+                  disabled={loading}
+                  size="lg"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Running LSTM...
+                    </>
+                  ) : (
+                    <>
+                      <Cpu className="mr-2 h-4 w-4" />
+                      Run LSTM Forecast
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Loading State */}
+          {loading && (
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center gap-3">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                  <div>
+                    <p className="font-semibold text-blue-900">Processing LSTM Forecast...</p>
+                    <p className="text-sm text-blue-700">This may take up to 2 minutes. Training 3 LSTM networks...</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <Card className="bg-red-50 border-red-200">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-red-900 mb-1">Error</p>
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Forecast Results */}
+          {forecast && !loading && (
+            <>
+              {/* KPI Cards */}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Model</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-semibold">{forecast.modelName}</div>
+                    <p className="text-xs text-muted-foreground mt-1">{forecast.modelType}</p>
+                  </CardContent>
+                </Card>
+
+                <KpiCardModern
+                  title="Base Price"
+                  value={`$${forecast.basePrice.toFixed(2)}`}
+                  icon={DollarSign}
+                />
+
+                <KpiCardModern
+                  title="Final Price"
+                  value={`$${forecast.finalPrice.toFixed(2)}`}
+                  icon={DollarSign}
+                />
+
+                <KpiCardModern
+                  title="Trend"
+                  value={forecast.trendLabel}
+                  change={`${forecast.priceChange > 0 ? '+' : ''}${forecast.priceChange.toFixed(2)}%`}
+                  badge={trendBadge}
+                  icon={TrendIcon}
+                  trend={forecast.trendLabel === 'UP' ? 'up' : forecast.trendLabel === 'DOWN' ? 'down' : 'neutral'}
+                />
+
+                <KpiCardModern
+                  title="Confidence"
+                  value={`${(forecast.confidence * 100).toFixed(0)}%`}
+                  badge={
+                    forecast.confidence > 0.7
+                      ? { label: 'High', variant: 'success' }
+                      : forecast.confidence > 0.5
+                      ? { label: 'Medium', variant: 'outline' }
+                      : { label: 'Low', variant: 'warning' }
+                  }
+                  icon={Activity}
+                />
+              </div>
+
+              {/* Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Price Forecast Visualization</CardTitle>
+                  <CardDescription>
+                    LSTM-generated forecast with confidence bands
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {prepareChartData() && <PriceChart data={prepareChartData()} />}
+                </CardContent>
+              </Card>
+
+              {/* JSON Output (collapsible) */}
+              <details className="group">
+                <summary className="cursor-pointer list-none">
+                  <Card className="transition-colors group-hover:bg-accent/50">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">Raw JSON Output</CardTitle>
+                        <ChevronDown className="h-5 w-5 transition-transform group-open:rotate-180" />
+                      </div>
+                    </CardHeader>
+                  </Card>
+                </summary>
+                <Card className="mt-2">
+                  <CardContent className="pt-6">
+                    <pre className="bg-muted p-4 rounded-lg overflow-auto text-xs max-h-96">
+                      {JSON.stringify(forecast, null, 2)}
+                    </pre>
+                  </CardContent>
+                </Card>
+              </details>
+            </>
+          )}
+
+          {/* Empty State */}
+          {!forecast && !loading && !error && (
+            <Card className="border-dashed border-2">
+              <CardContent className="pt-16 pb-16">
+                <div className="text-center space-y-4">
+                  <div className="text-6xl">🚀</div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">
+                      Ready to Run LSTM Forecast
+                    </h3>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                      Click "Run LSTM Forecast" above to execute the full LSTM Golden Path:<br />
+                      Frontend → API → Application → Domain → Infrastructure → Python LSTM
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div style={{
-            background: '#eff6ff',
-            border: '2px solid #3b82f6',
-            borderRadius: '8px',
-            padding: '20px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>
-              Processing LSTM Forecast...
-            </div>
-            <div style={{ color: '#666' }}>
-              This may take up to 2 minutes. Training 3 LSTM networks...
-            </div>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && !loading && (
-          <div style={{
-            background: '#fee2e2',
-            border: '2px solid #dc2626',
-            borderRadius: '8px',
-            padding: '20px'
-          }}>
-            <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px', color: '#dc2626' }}>
-              Error
-            </div>
-            <div style={{ color: '#666' }}>{error}</div>
-          </div>
-        )}
-
-        {/* Forecast Results */}
-        {forecast && !loading && (
-          <div>
-            {/* Summary Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-              <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Model</div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{forecast.modelName}</div>
-                <div style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>{forecast.modelType}</div>
-              </div>
-
-              <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Base Price</div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>${forecast.basePrice.toFixed(2)}</div>
-              </div>
-
-              <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Final Price</div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>${forecast.finalPrice.toFixed(2)}</div>
-              </div>
-
-              <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Trend</div>
-                <div style={{
-                  fontSize: '24px',
-                  fontWeight: 'bold',
-                  color: forecast.trendLabel === 'UP' ? '#16a34a' : forecast.trendLabel === 'DOWN' ? '#dc2626' : '#666'
-                }}>
-                  {forecast.trendLabel}
-                </div>
-                <div style={{ fontSize: '12px', color: '#999', marginTop: '5px' }}>
-                  {forecast.priceChange > 0 ? '+' : ''}{forecast.priceChange.toFixed(2)}%
-                </div>
-              </div>
-
-              <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                <div style={{ fontSize: '14px', color: '#666', marginBottom: '5px' }}>Confidence</div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>
-                  {(forecast.confidence * 100).toFixed(0)}%
-                </div>
-              </div>
-            </div>
-
-            {/* Chart */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '15px' }}>
-                Price Forecast Chart
-              </h3>
-              {prepareChartData() && <PriceChart data={prepareChartData()} />}
-            </div>
-
-            {/* JSON Output (collapsible) */}
-            <details style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-              <summary style={{ fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>
-                Raw JSON Output
-              </summary>
-              <pre style={{
-                background: '#f9fafb',
-                padding: '15px',
-                borderRadius: '6px',
-                overflow: 'auto',
-                fontSize: '12px',
-                maxHeight: '400px'
-              }}>
-                {JSON.stringify(forecast, null, 2)}
-              </pre>
-            </details>
-          </div>
-        )}
-
-        {/* Info Section */}
-        {!forecast && !loading && !error && (
-          <div style={{
-            background: '#f9fafb',
-            border: '2px dashed #e5e7eb',
-            borderRadius: '8px',
-            padding: '40px',
-            textAlign: 'center',
-            color: '#666'
-          }}>
-            <div style={{ fontSize: '48px', marginBottom: '10px' }}>🚀</div>
-            <div style={{ fontSize: '18px', marginBottom: '10px' }}>
-              Click "Run LSTM Forecast" to start
-            </div>
-            <div style={{ fontSize: '14px' }}>
-              This will execute the full LSTM Golden Path:<br />
-              Frontend → API → Application → Domain → Infrastructure → Python LSTM
-            </div>
-          </div>
-        )}
-      </div>
-    </Layout>
+      </DashboardLayout>
+    </>
   );
 }
