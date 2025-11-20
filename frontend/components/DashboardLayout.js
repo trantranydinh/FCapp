@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/router";
 import {
   LayoutDashboard,
   TrendingUp,
   Newspaper,
   BarChart3,
-  Menu,
-  X,
   Activity,
-  ChevronRight
+  User,
+  ChevronDown
 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -23,117 +22,131 @@ const navItems = [
 ];
 
 export default function DashboardLayout({ children, title = "Dashboard" }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const router = useRouter();
+
+  // Check if current route matches nav item
+  const isActive = (href) => {
+    return router.pathname === href;
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top App Bar */}
+      {/* Top Navigation Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-16 items-center gap-4 px-4 sm:px-6">
-          {/* Mobile menu button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+        <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-6">
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+                <LayoutDashboard className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg font-bold text-primary leading-none">Cashew Forecast</span>
+                <span className="text-xs text-muted-foreground">Price Analysis System</span>
+              </div>
+            </Link>
 
-          {/* App name & version */}
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold tracking-tight">Cashew Forecast</h1>
-            <Badge variant="outline" className="hidden sm:inline-flex">
-              v0.2.0
-            </Badge>
-          </div>
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Right side - System status */}
-          <div className="hidden md:flex items-center gap-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <div className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span className="text-xs">System OK</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex">
-        {/* Sidebar - Desktop */}
-        <aside className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 border-r bg-background pt-16 transition-transform duration-300 lg:static lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
-          <div className="flex h-full flex-col gap-2 px-3 py-4">
-            {/* Navigation */}
-            <nav className="flex-1 space-y-1">
+            {/* Navigation Links - Desktop */}
+            <nav className="hidden md:flex items-center gap-1 ml-4">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
+                  <Link key={item.href} href={item.href}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "transition-all relative h-16 rounded-none",
+                        isActive(item.href)
+                          ? "bg-accent/10 text-accent font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-accent"
+                          : "text-foreground/70 hover:text-accent hover:bg-accent/5"
+                      )}
+                    >
+                      <Icon className="mr-2 h-4 w-4" />
+                      {item.label}
+                    </Button>
                   </Link>
                 );
               })}
             </nav>
-
-            {/* System Status Mini Section */}
-            <div className="mt-auto space-y-2 border-t pt-4">
-              <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                System Status
-              </div>
-              <div className="px-3 space-y-1.5 text-xs text-muted-foreground">
-                <div className="flex items-center justify-between">
-                  <span>Backend API</span>
-                  <Badge variant="success" className="text-[10px] px-1.5 py-0">OK</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>LLM Provider</span>
-                  <span className="text-[10px]">none</span>
-                </div>
-              </div>
-            </div>
           </div>
-        </aside>
 
-        {/* Overlay for mobile */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-30 bg-background/80 backdrop-blur-sm lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+          {/* Right Side - Status & User */}
+          <div className="flex items-center gap-4">
+            {/* System Status Indicator */}
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
+              <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+              <span className="text-xs font-medium text-success">System Online</span>
+            </div>
 
-        {/* Main Content */}
-        <main className="flex-1 overflow-x-hidden">
-          {/* Breadcrumb / Page Title */}
-          <div className="border-b">
-            <div className="flex h-16 items-center gap-2 px-4 sm:px-6">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Link href="/" className="hover:text-foreground transition-colors">
-                  Home
+            {/* Version Badge */}
+            <Badge variant="outline" className="hidden sm:inline-flex">
+              v0.2.0
+            </Badge>
+
+            {/* User Avatar/Menu */}
+            <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
+                A
+              </div>
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile Navigation - Dropdown */}
+        <div className="md:hidden border-t">
+          <nav className="container mx-auto flex overflow-x-auto px-4 py-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link key={item.href} href={item.href}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "whitespace-nowrap transition-all",
+                      isActive(item.href)
+                        ? "bg-accent/10 text-accent font-medium border-b-2 border-accent rounded-b-none"
+                        : "text-foreground/70 hover:text-accent"
+                    )}
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </Button>
                 </Link>
-                <ChevronRight className="h-4 w-4" />
-                <span className="text-foreground font-medium">{title}</span>
-              </div>
+              );
+            })}
+          </nav>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        {/* Page Title Bar */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-primary">{title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Real-time cashew price forecasting and market analysis
+          </p>
+        </div>
+
+        {/* Page Content */}
+        {children}
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t mt-auto">
+        <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+            <p>© 2024 Cashew Forecast App. All rights reserved.</p>
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-2">
+                API Status: <Badge variant="success" className="text-[10px]">Connected</Badge>
+              </span>
             </div>
           </div>
-
-          {/* Page Content */}
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            {children}
-          </div>
-        </main>
-      </div>
+        </div>
+      </footer>
     </div>
   );
 }
