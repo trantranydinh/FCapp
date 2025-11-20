@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { useRouter } from "next/router";
 import {
   LayoutDashboard,
   TrendingUp,
@@ -21,12 +20,16 @@ const navItems = [
   { href: "/lstm-demo", label: "LSTM Demo", icon: Activity },
 ];
 
-export default function DashboardLayout({ children, title = "Dashboard" }) {
-  const router = useRouter();
-
+export default function DashboardLayout({ children, title = "Dashboard", currentPath = "" }) {
   // Check if current route matches nav item
   const isActive = (href) => {
-    return router.pathname === href;
+    // Simple check based on title for now
+    if (title.toLowerCase().includes("dashboard") && href === "/dashboard") return true;
+    if (title.toLowerCase().includes("price") && href === "/price-forecast") return true;
+    if (title.toLowerCase().includes("market") && href === "/market-insights") return true;
+    if (title.toLowerCase().includes("news") && href === "/news-watch") return true;
+    if (title.toLowerCase().includes("lstm") && href === "/lstm-demo") return true;
+    return false;
   };
 
   return (
