@@ -134,15 +134,15 @@ export default function LSTMDemo() {
       <DashboardLayout title="LSTM Demo">
         <div className="space-y-6">
           {/* Info Banner */}
-          <Card className="bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200">
+          <Card className="bg-gradient-to-r from-primary/5 to-accent/5 border-primary/20">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3 mb-2">
-                <Cpu className="h-6 w-6 text-emerald-600" />
-                <h2 className="text-lg font-semibold text-emerald-900">
+                <Cpu className="h-6 w-6 text-primary" />
+                <h2 className="text-lg font-semibold text-primary">
                   LSTM Neural Network Forecasting
                 </h2>
               </div>
-              <p className="text-sm text-emerald-700">
+              <p className="text-sm text-muted-foreground">
                 Test the complete LSTM Golden Path: Frontend → API → Application → Domain → Infrastructure → Python LSTM
               </p>
             </CardContent>
