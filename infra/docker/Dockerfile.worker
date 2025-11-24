@@ -1,0 +1,22 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Install Python and ML dependencies
+RUN apk add --no-cache python3 py3-pip
+
+# Install Python ML libraries
+RUN pip3 install --no-cache-dir \
+    pandas \
+    numpy \
+    prophet \
+    scikit-learn
+
+# Copy source code
+COPY . .
+
+# Workers will be started with different commands via docker-compose

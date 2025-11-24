@@ -1,0 +1,67 @@
+[
+  {
+    "title": "Global Cashew Market Outlook Remains Positive",
+    "source": "Cashew Market Watch",
+    "summary": "Industry forecasts indicate steady growth in global cashew consumption over the next quarter.",
+    "impact": "POSITIVE",
+    "reliability": 0.8,
+    "tags": [
+      "Market",
+      "Forecast"
+    ],
+    "category": "general",
+    "published_at": "2025-11-20T15:09:22.422Z"
+  },
+  {
+    "title": "Ivory Coast's Cashew Harvest Improved Due to Weather",
+    "source": "Logistics Daily",
+    "summary": "Production levels are being affected by various regional factors including weather and infrastructure.",
+    "impact": "HIGH",
+    "reliability": 0.75,
+    "tags": [
+      "Supply",
+      "Weather"
+    ],
+    "category": "supply",
+    "published_at": "2025-11-20T14:09:22.422Z"
+  },
+  {
+    "title": "India Cashew Market Sees Upward Price Movement",
+    "source": "Cashew Market Watch",
+    "summary": "Market analysts report significant price movements driven by supply-demand dynamics.",
+    "impact": "MEDIUM",
+    "reliability": 0.8,
+    "tags": [
+      "Price",
+      "Market"
+    ],
+    "category": "price",
+    "published_at": "2025-11-20T13:09:22.422Z"
+  },
+  {
+    "title": "Sustainability Initiatives Gain Traction in Cashew Industry",
+    "source": "AgriNews Global",
+    "summary": "Major processors commit to sustainable sourcing and fair labor practices.",
+    "impact": "POSITIVE",
+    "reliability": 0.75,
+    "tags": [
+      "Sustainability",
+      "Industry"
+    ],
+    "category": "general",
+    "published_at": "2025-11-20T12:09:22.422Z"
+  },
+  {
+    "title": "Raw Cashew Nut Prices Drop in Brazil",
+    "source": "AgriNews Global",
+    "summary": "Market analysts report significant price movements driven by supply-demand dynamics.",
+    "impact": "HIGH",
+    "reliability": 0.7,
+    "tags": [
+      "Price",
+      "Supply"
+    ],
+    "category": "price",
+    "published_at": "2025-11-20T11:09:22.422Z"
+  }
+]
