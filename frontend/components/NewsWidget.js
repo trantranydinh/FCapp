@@ -1,19 +1,20 @@
-import { Newspaper, ExternalLink, Clock, RefreshCw } from "lucide-react";
+import { Newspaper, ArrowRight, Clock, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "../lib/utils";
-
+import Link from "next/link";
+ 
 export default function NewsWidget({ news = [], onRefresh, isRefreshing = false }) {
     // Fallback data if no news provided
     const displayNews = news.length > 0 ? news : [
-        { id: 1, title: "Vietnam Cashew Exports Surge in Q3", source: "AgriNews", time: "2h ago", tag: "Market", url: "#" },
-        { id: 2, title: "Global Supply Chain Disruptions Impact Prices", source: "TradeDaily", time: "4h ago", tag: "Logistics", url: "#" },
-        { id: 3, title: "New Processing Tech Boosts Yields", source: "TechFarming", time: "6h ago", tag: "Technology", url: "#" },
-        { id: 4, title: "Weather Patterns Affect African Crop", source: "ClimateWatch", time: "12h ago", tag: "Weather", url: "#" },
+        { id: 1, title: "Vietnam Cashew Exports Surge in Q3", source: "AgriNews", time: "2h ago", tag: "Market" },
+        { id: 2, title: "Global Supply Chain Disruptions Impact Prices", source: "TradeDaily", time: "4h ago", tag: "Logistics" },
+        { id: 3, title: "New Processing Tech Boosts Yields", source: "TechFarming", time: "6h ago", tag: "Technology" },
+        { id: 4, title: "Weather Patterns Affect African Crop", source: "ClimateWatch", time: "12h ago", tag: "Weather" },
     ];
-
+ 
     return (
         <Card className="glass-card border-none h-full flex flex-col">
             <CardHeader className="pb-2">
@@ -38,10 +39,10 @@ export default function NewsWidget({ news = [], onRefresh, isRefreshing = false 
                     </div>
                 </div>
             </CardHeader>
-            <CardContent className="flex-1 p-0">
-                <ScrollArea className="h-[300px] px-6 pb-4">
+            <CardContent className="flex-1 p-0 flex flex-col">
+                <ScrollArea className="flex-1 px-6 pb-4">
                     <div className="space-y-4 pt-2">
-                        {displayNews.map((item, index) => (
+                        {displayNews.slice(0, 5).map((item, index) => (
                             <div
                                 key={item.id || index}
                                 className="group relative pl-4 border-l-2 border-muted hover:border-primary transition-colors duration-300"
@@ -54,26 +55,26 @@ export default function NewsWidget({ news = [], onRefresh, isRefreshing = false 
                                             {item.time || (item.published_at ? new Date(item.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now")}
                                         </div>
                                     </div>
-                                    <a
-                                        href={item.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm font-medium leading-snug group-hover:text-primary transition-colors cursor-pointer block hover:underline"
-                                    >
+                                    <Link href="/news-watch" className="text-sm font-medium leading-snug group-hover:text-primary transition-colors cursor-pointer block hover:underline">
                                         {item.title}
-                                    </a>
+                                    </Link>
                                     <div className="flex items-center justify-between mt-1">
                                         <span className="text-xs text-muted-foreground">{item.source}</span>
-                                        <a href={item.url} target="_blank" rel="noopener noreferrer">
-                                            <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary" />
-                                        </a>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </ScrollArea>
+                <div className="p-4 border-t border-border/50 bg-muted/20">
+                    <Link href="/news-watch" className="w-full">
+                        <Button variant="ghost" size="sm" className="w-full text-xs gap-1 h-8">
+                            View All News Details <ArrowRight className="h-3 w-3" />
+                        </Button>
+                    </Link>
+                </div>
             </CardContent>
         </Card>
     );
 }
+ 

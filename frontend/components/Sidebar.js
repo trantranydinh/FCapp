@@ -10,34 +10,36 @@ import {
     Database,
     Key,
     Info,
-    ChevronRight
+    ChevronRight,
+    FileText
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
-
+ 
 const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/price-forecast", label: "Price Forecast", icon: TrendingUp },
     { href: "/market-insights", label: "Market Insights", icon: BarChart3 },
     { href: "/news-watch", label: "News Watch", icon: Newspaper },
     { href: "/lstm-demo", label: "LSTM Demo", icon: Activity },
-    { href: "/model-performance", label: "Model Performance", icon: Info, isNew: true },
+    { href: "/reports", label: "Reports", icon: FileText, isNew: true },
+    { href: "/model-performance", label: "Model Performance", icon: Info },
 ];
-
+ 
 const managementItems = [
     { href: "/settings", label: "Settings", icon: Settings },
     { href: "/data-management", label: "Data Management", icon: Database },
     { href: "/api-access", label: "API Access", icon: Key },
 ];
-
+ 
 export default function Sidebar() {
     const router = useRouter();
     const currentPath = router.pathname;
-
+ 
     const NavItem = ({ item }) => {
         const isActive = currentPath === item.href;
         const Icon = item.icon;
-
+ 
         return (
             <Link href={item.href} className="w-full">
                 <div
@@ -51,22 +53,22 @@ export default function Sidebar() {
                     {isActive && (
                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full" />
                     )}
-
+ 
                     <Icon
                         className={cn(
                             "h-5 w-5 transition-transform duration-300 group-hover:scale-110",
                             isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary"
                         )}
                     />
-
+ 
                     <span className="flex-1 truncate">{item.label}</span>
-
+ 
                     {item.isNew && (
                         <span className="px-1.5 py-0.5 text-[10px] font-bold bg-accent/10 text-accent rounded-md uppercase tracking-wider">
                             New
                         </span>
                     )}
-
+ 
                     {isActive && (
                         <ChevronRight className="h-4 w-4 text-primary/50 animate-in fade-in slide-in-from-left-1" />
                     )}
@@ -74,7 +76,7 @@ export default function Sidebar() {
             </Link>
         );
     };
-
+ 
     return (
         <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-white/10 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 hidden lg:flex flex-col">
             {/* Logo Area */}
@@ -88,7 +90,7 @@ export default function Sidebar() {
                     </div>
                 </Link>
             </div>
-
+ 
             {/* Navigation */}
             <div className="flex-1 overflow-y-auto py-6 px-3 space-y-6 custom-scrollbar">
                 {/* Main Menu */}
@@ -100,7 +102,7 @@ export default function Sidebar() {
                         <NavItem key={item.href} item={item} />
                     ))}
                 </div>
-
+ 
                 {/* Management Menu */}
                 <div className="space-y-1">
                     <p className="px-3 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2">
@@ -111,7 +113,7 @@ export default function Sidebar() {
                     ))}
                 </div>
             </div>
-
+ 
             {/* User Profile / Bottom Area */}
             <div className="p-4 border-t border-white/10 bg-white/5">
                 <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer group">
@@ -127,3 +129,4 @@ export default function Sidebar() {
         </aside>
     );
 }
+ 

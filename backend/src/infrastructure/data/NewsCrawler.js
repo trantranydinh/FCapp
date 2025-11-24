@@ -1,8 +1,4 @@
-/**
- * INFRASTRUCTURE LAYER: News Crawler with Keyword Support
- *
- * Responsibility: Fetch news from external sources with keyword filtering
- */
+
  
 class NewsCrawler {
     constructor() {
@@ -86,11 +82,25 @@ class NewsCrawler {
         // Shuffle and limit
         newsItems = this._shuffleArray(newsItems).slice(0, limit);
  
-        // Add timestamps
-        newsItems = newsItems.map((item, index) => ({
-            ...item,
-            published_at: new Date(Date.now() - (index * 3600000)).toISOString() // Stagger by hours
-        }));
+        // Add timestamps (ensure they are strictly recent - within last 7 days)
+        const now = new Date();
+        newsItems = newsItems.map((item, index) => {
+            const date = new Date(now);
+            // Randomly distribute within last 7 days, weighted towards today
+            const daysBack = Math.floor(Math.random() * 7);
+            const hoursBack = Math.floor(Math.random() * 24);
+ 
+            date.setDate(date.getDate() - daysBack);
+            date.setHours(date.getHours() - hoursBack);
+ 
+            return {
+                ...item,
+                published_at: date.toISOString()
+            };
+        });
+ 
+        // Sort by date descending
+        newsItems.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
  
         console.log(`[NewsCrawler] Crawled ${newsItems.length} items`);
         return newsItems;
@@ -193,4 +203,3 @@ class NewsCrawler {
  
 const newsCrawler = new NewsCrawler();
 export default newsCrawler;
- 
