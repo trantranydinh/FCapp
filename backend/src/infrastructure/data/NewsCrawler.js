@@ -3,7 +3,7 @@
  *
  * Responsibility: Fetch news from external sources with keyword filtering
  */
-
+ 
 class NewsCrawler {
     constructor() {
         // Mock sources with reliability scores
@@ -14,7 +14,7 @@ class NewsCrawler {
             { name: 'African Cashew Alliance', reliability: 0.85, category: 'supply' },
             { name: 'Logistics Daily', reliability: 0.75, category: 'logistics' }
         ];
-
+ 
         // Keyword-based news templates
         this.newsTemplates = {
             price: [
@@ -38,14 +38,14 @@ class NewsCrawler {
                 { title: "Trade Policy Changes Affect {region} Exports", impact: "MEDIUM", tags: ["Regulation", "Trade"] }
             ]
         };
-
+ 
         // Dynamic data for templates
         this.regions = ["Vietnam", "India", "Ivory Coast", "Nigeria", "Brazil", "EU", "USA", "China"];
         this.actions = ["Surge", "Drop", "Stabilize", "Fluctuate"];
         this.trends = ["Upward", "Downward", "Stable", "Volatile"];
         this.statuses = ["Delayed", "Accelerated", "Improved", "Challenged"];
     }
-
+ 
     /**
      * Crawl news with optional keyword filtering
      * @param {Object} options - Crawl options
@@ -55,14 +55,14 @@ class NewsCrawler {
      */
     async crawl(options = {}) {
         const { keywords = [], limit = 10 } = options;
-
+ 
         console.log(`[NewsCrawler] Starting crawl... Keywords: ${keywords.length > 0 ? keywords.join(', ') : 'all'}`);
-
+ 
         // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
-
+ 
         let newsItems = [];
-
+ 
         // If keywords specified, generate targeted news
         if (keywords.length > 0) {
             keywords.forEach(keyword => {
@@ -79,39 +79,39 @@ class NewsCrawler {
                 newsItems.push(this._generateNewsFromTemplate(template, category));
             });
         }
-
+ 
         // Add some general market news
         newsItems.push(...this._getGeneralNews());
-
+ 
         // Shuffle and limit
         newsItems = this._shuffleArray(newsItems).slice(0, limit);
-
+ 
         // Add timestamps
         newsItems = newsItems.map((item, index) => ({
             ...item,
             published_at: new Date(Date.now() - (index * 3600000)).toISOString() // Stagger by hours
         }));
-
+ 
         console.log(`[NewsCrawler] Crawled ${newsItems.length} items`);
         return newsItems;
     }
-
+ 
     /**
      * Generate news from template
      * @private
      */
     _generateNewsFromTemplate(template, category) {
         let title = template.title;
-
+ 
         // Replace placeholders
         title = title.replace('{region}', this._randomItem(this.regions));
         title = title.replace('{action}', this._randomItem(this.actions));
         title = title.replace('{trend}', this._randomItem(this.trends));
         title = title.replace('{status}', this._randomItem(this.statuses));
         title = title.replace('{route}', `${this._randomItem(this.regions)}-${this._randomItem(this.regions)}`);
-
+ 
         const source = this._randomItem(this.sources);
-
+ 
         return {
             title,
             source: source.name,
@@ -119,10 +119,11 @@ class NewsCrawler {
             impact: template.impact,
             reliability: source.reliability,
             tags: template.tags,
-            category
+            category,
+            url: 'https://www.google.com/search?q=' + encodeURIComponent(title)
         };
     }
-
+ 
     /**
      * Generate summary based on title
      * @private
@@ -135,10 +136,10 @@ class NewsCrawler {
             logistics: "Transportation and shipping challenges continue to impact global trade flows.",
             regulation: "New policy frameworks are being implemented to ensure quality and fair trade practices."
         };
-
+ 
         return summaries[category] || "Industry experts are monitoring developments closely.";
     }
-
+ 
     /**
      * Get general market news
      * @private
@@ -152,7 +153,8 @@ class NewsCrawler {
                 impact: "POSITIVE",
                 reliability: 0.8,
                 tags: ["Market", "Forecast"],
-                category: "general"
+                category: "general",
+                url: "https://www.google.com/search?q=Global+Cashew+Market+Outlook"
             },
             {
                 title: "Sustainability Initiatives Gain Traction in Cashew Industry",
@@ -161,11 +163,12 @@ class NewsCrawler {
                 impact: "POSITIVE",
                 reliability: 0.75,
                 tags: ["Sustainability", "Industry"],
-                category: "general"
+                category: "general",
+                url: "https://www.google.com/search?q=Cashew+Industry+Sustainability"
             }
         ];
     }
-
+ 
     /**
      * Utility: Get random item from array
      * @private
@@ -173,7 +176,7 @@ class NewsCrawler {
     _randomItem(array) {
         return array[Math.floor(Math.random() * array.length)];
     }
-
+ 
     /**
      * Utility: Shuffle array
      * @private
@@ -187,6 +190,7 @@ class NewsCrawler {
         return shuffled;
     }
 }
-
+ 
 const newsCrawler = new NewsCrawler();
 export default newsCrawler;
+ 

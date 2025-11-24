@@ -1,42 +1,31 @@
 [
   {
-    "title": "Global Cashew Market Outlook Remains Positive",
-    "source": "Cashew Market Watch",
-    "summary": "Industry forecasts indicate steady growth in global cashew consumption over the next quarter.",
-    "impact": "POSITIVE",
-    "reliability": 0.8,
-    "tags": [
-      "Market",
-      "Forecast"
-    ],
-    "category": "general",
-    "published_at": "2025-11-20T15:09:22.422Z"
-  },
-  {
-    "title": "Ivory Coast's Cashew Harvest Improved Due to Weather",
-    "source": "Logistics Daily",
-    "summary": "Production levels are being affected by various regional factors including weather and infrastructure.",
-    "impact": "HIGH",
-    "reliability": 0.75,
-    "tags": [
-      "Supply",
-      "Weather"
-    ],
-    "category": "supply",
-    "published_at": "2025-11-20T14:09:22.422Z"
-  },
-  {
-    "title": "India Cashew Market Sees Upward Price Movement",
+    "title": "Raw Cashew Nut Prices Surge in India",
     "source": "Cashew Market Watch",
     "summary": "Market analysts report significant price movements driven by supply-demand dynamics.",
-    "impact": "MEDIUM",
+    "impact": "HIGH",
     "reliability": 0.8,
     "tags": [
       "Price",
-      "Market"
+      "Supply"
     ],
     "category": "price",
-    "published_at": "2025-11-20T13:09:22.422Z"
+    "url": "https://www.google.com/search?q=Raw%20Cashew%20Nut%20Prices%20Surge%20in%20India",
+    "published_at": "2025-11-24T06:32:01.127Z"
+  },
+  {
+    "title": "Brazil Demand for Cashew Kernels Volatile",
+    "source": "Vietnam Trade Portal",
+    "summary": "Consumer preferences and economic conditions are shaping market demand patterns.",
+    "impact": "MEDIUM",
+    "reliability": 0.9,
+    "tags": [
+      "Demand",
+      "Export"
+    ],
+    "category": "demand",
+    "url": "https://www.google.com/search?q=Brazil%20Demand%20for%20Cashew%20Kernels%20Volatile",
+    "published_at": "2025-11-24T05:32:01.127Z"
   },
   {
     "title": "Sustainability Initiatives Gain Traction in Cashew Industry",
@@ -49,19 +38,62 @@
       "Industry"
     ],
     "category": "general",
-    "published_at": "2025-11-20T12:09:22.422Z"
+    "url": "https://www.google.com/search?q=Cashew+Industry+Sustainability",
+    "published_at": "2025-11-24T04:32:01.127Z"
   },
   {
-    "title": "Raw Cashew Nut Prices Drop in Brazil",
-    "source": "AgriNews Global",
-    "summary": "Market analysts report significant price movements driven by supply-demand dynamics.",
+    "title": "India Introduces New Quality Standards",
+    "source": "Logistics Daily",
+    "summary": "New policy frameworks are being implemented to ensure quality and fair trade practices.",
+    "impact": "NEUTRAL",
+    "reliability": 0.75,
+    "tags": [
+      "Regulation",
+      "Quality"
+    ],
+    "category": "regulation",
+    "url": "https://www.google.com/search?q=India%20Introduces%20New%20Quality%20Standards",
+    "published_at": "2025-11-24T03:32:01.127Z"
+  },
+  {
+    "title": "India's Cashew Harvest Challenged Due to Weather",
+    "source": "African Cashew Alliance",
+    "summary": "Production levels are being affected by various regional factors including weather and infrastructure.",
     "impact": "HIGH",
+    "reliability": 0.85,
+    "tags": [
+      "Supply",
+      "Weather"
+    ],
+    "category": "supply",
+    "url": "https://www.google.com/search?q=India's%20Cashew%20Harvest%20Challenged%20Due%20to%20Weather",
+    "published_at": "2025-11-24T02:32:01.127Z"
+  },
+  {
+    "title": "Global Cashew Market Outlook Remains Positive",
+    "source": "Cashew Market Watch",
+    "summary": "Industry forecasts indicate steady growth in global cashew consumption over the next quarter.",
+    "impact": "POSITIVE",
+    "reliability": 0.8,
+    "tags": [
+      "Market",
+      "Forecast"
+    ],
+    "category": "general",
+    "url": "https://www.google.com/search?q=Global+Cashew+Market+Outlook",
+    "published_at": "2025-11-24T01:32:01.127Z"
+  },
+  {
+    "title": "Container Availability Challenged for Cashew Exports",
+    "source": "AgriNews Global",
+    "summary": "Transportation and shipping challenges continue to impact global trade flows.",
+    "impact": "MEDIUM",
     "reliability": 0.7,
     "tags": [
-      "Price",
-      "Supply"
+      "Logistics"
     ],
-    "category": "price",
-    "published_at": "2025-11-20T11:09:22.422Z"
+    "category": "logistics",
+    "url": "https://www.google.com/search?q=Container%20Availability%20Challenged%20for%20Cashew%20Exports",
+    "published_at": "2025-11-24T00:32:01.127Z"
   }
 ]

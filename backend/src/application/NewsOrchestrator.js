@@ -9,20 +9,20 @@
  * - AI enhancement for news insights
  * - Graceful degradation when AI unavailable
  */
-
+ 
 import path from 'path';
 import fs from 'fs-extra';
 import llmProvider from '../infrastructure/llm/LLMProvider.js';
 import newsCrawler from '../infrastructure/data/NewsCrawler.js';
 import databaseAdapter from '../infrastructure/db/DatabaseAdapter.js';
 import { settings } from '../settings.js';
-
+ 
 class NewsOrchestrator {
   constructor() {
     // Default to data directory for news storage
     this.newsFilePath = path.resolve(process.cwd(), 'data', 'demo_news.json');
   }
-
+ 
   /**
    * Get news summary
    *
@@ -33,40 +33,90 @@ class NewsOrchestrator {
     if (!Number.isInteger(limit) || limit < 1 || limit > 20) {
       throw new Error('limit must be an integer between 1 and 20');
     }
-
+ 
     console.log(`[NewsOrchestrator] Fetching news summary (limit: ${limit})`);
-
+ 
     try {
       // Step 1: Load news items
       const items = await this._loadNewsItems();
-
+ 
       // Step 2: Select top N items
       const topNews = items.slice(0, limit);
-
+ 
       // Step 3: Enhance with AI (if enabled)
       const enhancedNews = await this._enhanceNewsWithAI(topNews);
-
+ 
       return {
         total_count: items.length,
         top_news: enhancedNews,
         last_updated: new Date().toISOString()
       };
-
+ 
     } catch (error) {
       console.error('[NewsOrchestrator] Failed to fetch news:', error.message);
       throw new Error(`Failed to fetch news summary: ${error.message}`);
     }
   }
-
+ 
   /**
    * Refresh news data by crawling with optional keywords
-   * 
+   *
    * @param {Object} options - Crawl options
+   * @returns {Promise<Array>} List of refreshed news items
+   */
+  async refreshNews(options = {}) {
+    const { keywords = [], limit = 10 } = options;
+    console.log(`[NewsOrchestrator] Refreshing news (keywords: ${keywords.join(', ')}, limit: ${limit})`);
+ 
+    try {
+      // Step 1: Crawl new data
+      const newsItems = await newsCrawler.crawl({ keywords, limit });
+ 
+      // Step 2: Persist to file (or DB in future)
+      await fs.ensureDir(path.dirname(this.newsFilePath));
+      await fs.writeJson(this.newsFilePath, newsItems, { spaces: 2 });
+      console.log(`[NewsOrchestrator] Saved ${newsItems.length} items to ${this.newsFilePath}`);
+ 
+      return newsItems;
+ 
+    } catch (error) {
+      console.error('[NewsOrchestrator] Failed to refresh news:', error.message);
+      throw new Error(`Failed to refresh news: ${error.message}`);
+    }
+  }
+ 
+  /**
+   * Load news items from storage
+   * @private
+   */
+  async _loadNewsItems() {
+    try {
+      // Check if file exists
+      const exists = await fs.pathExists(this.newsFilePath);
+ 
+      if (exists) {
+        const data = await fs.readJson(this.newsFilePath);
+        if (Array.isArray(data) && data.length > 0) {
+          return data;
+        }
+      }
+ 
+      console.warn('[NewsOrchestrator] No local news found, using fallback data');
+      return this._getFallbackNews();
+ 
+    } catch (error) {
+      console.warn('[NewsOrchestrator] Failed to load news file, using fallback:', error.message);
+      return this._getFallbackNews();
+    }
+  }
+ 
+  /**
+   * Get fallback news data
    * @private
    */
   _getFallbackNews() {
     const now = new Date().toISOString();
-
+ 
     return [
       {
         title: 'Export demand for cashew remains steady in Q1',
@@ -100,7 +150,7 @@ class NewsOrchestrator {
       }
     ];
   }
-
+ 
   /**
    * Enhance news with AI-generated insights
    * @private
@@ -110,9 +160,9 @@ class NewsOrchestrator {
     if (!llmProvider.isEnabled() || newsItems.length === 0) {
       return newsItems;
     }
-
+ 
     console.log(`[NewsOrchestrator] Enhancing ${newsItems.length} news items with AI`);
-
+ 
     try {
       // Enhance each news item individually (parallel execution)
       const enhancedPromises = newsItems.map(async (item) => {
@@ -127,16 +177,17 @@ class NewsOrchestrator {
           return item; // Return original if enhancement fails
         }
       });
-
+ 
       return await Promise.all(enhancedPromises);
-
+ 
     } catch (error) {
       console.warn('[NewsOrchestrator] AI enhancement failed, returning original news:', error.message);
       return newsItems; // Graceful degradation
     }
   }
 }
-
+ 
 // Export singleton instance
 const newsOrchestrator = new NewsOrchestrator();
 export default newsOrchestrator;
+ 

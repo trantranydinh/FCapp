@@ -6,13 +6,13 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { useNewsSummary } from "../hooks/useDashboardData";
 import { Newspaper, Tag, Calendar, ExternalLink } from "lucide-react";
-
+ 
 const NewsWatchPage = () => {
   const [limit, setLimit] = useState(5);
   const { data, isLoading } = useNewsSummary(limit);
-
+ 
   const newsItems = data?.top_news || [];
-
+ 
   return (
     <>
       <Head>
@@ -51,7 +51,7 @@ const NewsWatchPage = () => {
               </div>
             </CardContent>
           </Card>
-
+ 
           {/* News Feed */}
           <Card>
             <CardHeader>
@@ -83,15 +83,37 @@ const NewsWatchPage = () => {
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 space-y-3">
                           <h3 className="font-semibold leading-tight text-lg">
-                            {item.title}
+                            {item.url ? (
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-primary hover:underline"
+                              >
+                                {item.title}
+                              </a>
+                            ) : (
+                              item.title
+                            )}
                           </h3>
-
+ 
                           {/* Meta info */}
                           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                             {item.source && (
                               <div className="flex items-center gap-1">
                                 <ExternalLink className="h-3 w-3" />
-                                <span className="font-medium">{item.source}</span>
+                                {item.url ? (
+                                  <a
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="font-medium hover:text-primary hover:underline"
+                                  >
+                                    {item.source}
+                                  </a>
+                                ) : (
+                                  <span className="font-medium">{item.source}</span>
+                                )}
                               </div>
                             )}
                             {item.published_at && (
@@ -101,14 +123,14 @@ const NewsWatchPage = () => {
                               </div>
                             )}
                           </div>
-
+ 
                           {/* Summary */}
                           {item.summary && (
                             <p className="text-sm text-muted-foreground leading-relaxed">
                               {item.summary}
                             </p>
                           )}
-
+ 
                           {/* Tags */}
                           {item.tags && item.tags.length > 0 && (
                             <div className="flex flex-wrap items-center gap-2">
@@ -141,5 +163,5 @@ const NewsWatchPage = () => {
     </>
   );
 };
-
+ 
 export default NewsWatchPage;
