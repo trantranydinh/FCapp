@@ -142,11 +142,60 @@ class NewsWorker {
   }
 
   private async fetchNews(profile: any): Promise<any[]> {
-    // In a real implementation, this would fetch from RSS feeds or news APIs
-    // For demo, we'll generate synthetic news articles
+    const keywords = profile.keywords.slice(0, 3);
+    const allNews: any[] = [];
 
-    const keywords = profile.keywords.slice(0, 5);
+    console.log(`[News Worker] Fetching real news for keywords: ${keywords.join(', ')}`);
 
+    for (const keyword of keywords) {
+      try {
+        // Fetch Google News RSS
+        const response = await fetch(
+          `https://news.google.com/rss/search?q=${encodeURIComponent(keyword + ' cashew market')}&hl=en-US&gl=US&ceid=US:en`
+        );
+
+        if (!response.ok) {
+          console.warn(`[News Worker] Failed to fetch news for ${keyword}: ${response.statusText}`);
+          continue;
+        }
+
+        const xml = await response.text();
+
+        // Simple regex to extract items
+        const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
+
+        for (const item of items.slice(0, 5)) {
+          const titleMatch = item.match(/<title>(.*?)<\/title>/);
+          const linkMatch = item.match(/<link>(.*?)<\/link>/);
+          const pubDateMatch = item.match(/<pubDate>(.*?)<\/pubDate>/);
+          const sourceMatch = item.match(/<source url=".*?">(.*?)<\/source>/);
+
+          if (titleMatch && linkMatch) {
+            const source = sourceMatch ? sourceMatch[1] : 'Google News';
+            const title = titleMatch[1].replace(` - ${source}`, ''); // Clean title
+
+            allNews.push({
+              title: title,
+              url: linkMatch[1],
+              source: source,
+              publishedAt: pubDateMatch ? new Date(pubDateMatch[1]) : new Date(),
+              content: `${title} - Published in ${source}.` // Minimal content for now
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`[News Worker] Error fetching news for ${keyword}:`, error);
+      }
+    }
+
+    if (allNews.length > 0) {
+      console.log(`[News Worker] Successfully fetched ${allNews.length} articles.`);
+      return allNews;
+    }
+
+    console.log('[News Worker] No real news found, falling back to synthetic data.');
+
+    // Fallback to synthetic data
     const syntheticNews = keywords.map((keyword: string, idx: number) => ({
       title: `${keyword} Market Update: Latest Developments`,
       url: `https://example.com/news/${idx + 1}`,

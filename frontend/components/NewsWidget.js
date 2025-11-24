@@ -8,10 +8,10 @@ import { cn } from "../lib/utils";
 export default function NewsWidget({ news = [], onRefresh, isRefreshing = false }) {
     // Fallback data if no news provided
     const displayNews = news.length > 0 ? news : [
-        { id: 1, title: "Vietnam Cashew Exports Surge in Q3", source: "AgriNews", time: "2h ago", tag: "Market" },
-        { id: 2, title: "Global Supply Chain Disruptions Impact Prices", source: "TradeDaily", time: "4h ago", tag: "Logistics" },
-        { id: 3, title: "New Processing Tech Boosts Yields", source: "TechFarming", time: "6h ago", tag: "Technology" },
-        { id: 4, title: "Weather Patterns Affect African Crop", source: "ClimateWatch", time: "12h ago", tag: "Weather" },
+        { id: 1, title: "Vietnam Cashew Exports Surge in Q3", source: "AgriNews", time: "2h ago", tag: "Market", url: "#" },
+        { id: 2, title: "Global Supply Chain Disruptions Impact Prices", source: "TradeDaily", time: "4h ago", tag: "Logistics", url: "#" },
+        { id: 3, title: "New Processing Tech Boosts Yields", source: "TechFarming", time: "6h ago", tag: "Technology", url: "#" },
+        { id: 4, title: "Weather Patterns Affect African Crop", source: "ClimateWatch", time: "12h ago", tag: "Weather", url: "#" },
     ];
 
     return (
@@ -54,12 +54,19 @@ export default function NewsWidget({ news = [], onRefresh, isRefreshing = false 
                                             {item.time || (item.published_at ? new Date(item.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now")}
                                         </div>
                                     </div>
-                                    <h4 className="text-sm font-medium leading-snug group-hover:text-primary transition-colors cursor-pointer">
+                                    <a
+                                        href={item.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm font-medium leading-snug group-hover:text-primary transition-colors cursor-pointer block hover:underline"
+                                    >
                                         {item.title}
-                                    </h4>
+                                    </a>
                                     <div className="flex items-center justify-between mt-1">
                                         <span className="text-xs text-muted-foreground">{item.source}</span>
-                                        <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <a href={item.url} target="_blank" rel="noopener noreferrer">
+                                            <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary" />
+                                        </a>
                                     </div>
                                 </div>
                             </div>

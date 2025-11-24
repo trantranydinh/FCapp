@@ -122,7 +122,7 @@ class PriceWorker {
       };
 
       const python = spawn('python', [
-        'ml-models/rcn-price/prophet_forecaster.py',
+        '../ml-models/rcn-price/simplified_lstm.py',
         JSON.stringify(input),
       ]);
 
