@@ -72,7 +72,7 @@ export default function FileUploadCard({ onUploadSuccess }) {
         formData.append("file", file);
 
         try {
-            const response = await api.post("/api/v1/forecast/upload", formData, {
+            const response = await api.post("/api/v1/price/upload-and-forecast", formData, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                 },

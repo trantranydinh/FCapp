@@ -1,31 +1,45 @@
 [
   {
-    "title": "New Processing Facilities in USA Boost Capacity",
-    "source": "Logistics Daily",
-    "summary": "Production levels are being affected by various regional factors including weather and infrastructure.",
+    "title": "Sustainability Initiatives Gain Traction in Cashew Industry",
+    "source": "AgriNews Global",
+    "summary": "Major processors commit to sustainable sourcing and fair labor practices.",
     "impact": "POSITIVE",
     "reliability": 0.75,
     "tags": [
-      "Supply",
-      "Processing"
+      "Sustainability",
+      "Industry"
     ],
-    "category": "supply",
-    "url": "https://www.google.com/search?q=New%20Processing%20Facilities%20in%20USA%20Boost%20Capacity",
-    "published_at": "2025-11-23T02:11:22.250Z"
+    "category": "general",
+    "url": "https://www.google.com/search?q=Cashew+Industry+Sustainability",
+    "published_at": "2025-11-24T23:01:20.304Z"
   },
   {
-    "title": "Shipping Costs Stabilize on Brazil-USA Route",
-    "source": "AgriNews Global",
-    "summary": "Transportation and shipping challenges continue to impact global trade flows.",
-    "impact": "NEGATIVE",
-    "reliability": 0.7,
+    "title": "Vietnam Introduces New Quality Standards",
+    "source": "African Cashew Alliance",
+    "summary": "New policy frameworks are being implemented to ensure quality and fair trade practices.",
+    "impact": "NEUTRAL",
+    "reliability": 0.85,
     "tags": [
-      "Logistics",
-      "Shipping"
+      "Regulation",
+      "Quality"
     ],
-    "category": "logistics",
-    "url": "https://www.google.com/search?q=Shipping%20Costs%20Stabilize%20on%20Brazil-USA%20Route",
-    "published_at": "2025-11-23T00:11:22.250Z"
+    "category": "regulation",
+    "url": "https://www.google.com/search?q=Vietnam%20Introduces%20New%20Quality%20Standards",
+    "published_at": "2025-11-23T22:01:20.304Z"
+  },
+  {
+    "title": "Brazil's Cashew Harvest Improved Due to Weather",
+    "source": "Logistics Daily",
+    "summary": "Production levels are being affected by various regional factors including weather and infrastructure.",
+    "impact": "HIGH",
+    "reliability": 0.75,
+    "tags": [
+      "Supply",
+      "Weather"
+    ],
+    "category": "supply",
+    "url": "https://www.google.com/search?q=Brazil's%20Cashew%20Harvest%20Improved%20Due%20to%20Weather",
+    "published_at": "2025-11-22T13:01:20.304Z"
   },
   {
     "title": "Global Cashew Market Outlook Remains Positive",
@@ -39,62 +53,47 @@
     ],
     "category": "general",
     "url": "https://www.google.com/search?q=Global+Cashew+Market+Outlook",
-    "published_at": "2025-11-22T16:11:22.250Z"
+    "published_at": "2025-11-21T10:01:20.304Z"
   },
   {
-    "title": "India Demand for Cashew Kernels Volatile",
+    "title": "India Cashew Market Sees Stable Price Movement",
     "source": "AgriNews Global",
-    "summary": "Consumer preferences and economic conditions are shaping market demand patterns.",
+    "summary": "Market analysts report significant price movements driven by supply-demand dynamics.",
     "impact": "MEDIUM",
     "reliability": 0.7,
+    "tags": [
+      "Price",
+      "Market"
+    ],
+    "category": "price",
+    "url": "https://www.google.com/search?q=India%20Cashew%20Market%20Sees%20Stable%20Price%20Movement",
+    "published_at": "2025-11-20T10:01:20.304Z"
+  },
+  {
+    "title": "Ivory Coast Demand for Cashew Kernels Stable",
+    "source": "Vietnam Trade Portal",
+    "summary": "Consumer preferences and economic conditions are shaping market demand patterns.",
+    "impact": "MEDIUM",
+    "reliability": 0.9,
     "tags": [
       "Demand",
       "Export"
     ],
     "category": "demand",
-    "url": "https://www.google.com/search?q=India%20Demand%20for%20Cashew%20Kernels%20Volatile",
-    "published_at": "2025-11-20T22:11:22.250Z"
+    "url": "https://www.google.com/search?q=Ivory%20Coast%20Demand%20for%20Cashew%20Kernels%20Stable",
+    "published_at": "2025-11-19T19:01:20.304Z"
   },
   {
-    "title": "Sustainability Initiatives Gain Traction in Cashew Industry",
-    "source": "AgriNews Global",
-    "summary": "Major processors commit to sustainable sourcing and fair labor practices.",
-    "impact": "POSITIVE",
-    "reliability": 0.75,
-    "tags": [
-      "Sustainability",
-      "Industry"
-    ],
-    "category": "general",
-    "url": "https://www.google.com/search?q=Cashew+Industry+Sustainability",
-    "published_at": "2025-11-20T07:11:22.250Z"
-  },
-  {
-    "title": "Raw Cashew Nut Prices Fluctuate in India",
-    "source": "African Cashew Alliance",
-    "summary": "Market analysts report significant price movements driven by supply-demand dynamics.",
-    "impact": "HIGH",
-    "reliability": 0.85,
-    "tags": [
-      "Price",
-      "Supply"
-    ],
-    "category": "price",
-    "url": "https://www.google.com/search?q=Raw%20Cashew%20Nut%20Prices%20Fluctuate%20in%20India",
-    "published_at": "2025-11-19T02:11:22.250Z"
-  },
-  {
-    "title": "EU Introduces New Quality Standards",
+    "title": "Container Availability Improved for Cashew Exports",
     "source": "Logistics Daily",
-    "summary": "New policy frameworks are being implemented to ensure quality and fair trade practices.",
-    "impact": "NEUTRAL",
+    "summary": "Transportation and shipping challenges continue to impact global trade flows.",
+    "impact": "MEDIUM",
     "reliability": 0.75,
     "tags": [
-      "Regulation",
-      "Quality"
+      "Logistics"
     ],
-    "category": "regulation",
-    "url": "https://www.google.com/search?q=EU%20Introduces%20New%20Quality%20Standards",
-    "published_at": "2025-11-18T21:11:22.250Z"
+    "category": "logistics",
+    "url": "https://www.google.com/search?q=Container%20Availability%20Improved%20for%20Cashew%20Exports",
+    "published_at": "2025-11-19T18:01:20.304Z"
   }
 ]

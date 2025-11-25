@@ -40,13 +40,12 @@ class LSTMModel {
     }
 
     // Prepare data for Python script
-    // The Python script expects to read from a file, so we need to provide the path
-    // For now, we'll use the default data file location
-    const projectRoot = path.resolve(__dirname, '../../../../');
-    const dataFilePath = path.join(projectRoot, 'data', 'sample_price_data.xlsx');
-
+    // Pass historical data directly to avoid file path issues
     const pythonInput = {
-      file_path: dataFilePath,
+      data: historicalData.map(d => ({
+        date: d.date instanceof Date ? d.date.toISOString() : d.date,
+        price: d.price
+      })),
       forecast_days: forecastDays
     };
 

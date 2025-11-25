@@ -226,13 +226,43 @@ def main():
     """Main execution"""
     try:
         # Read input from stdin
-        input_data = json.load(sys.stdin)
+        # Handle potential encoding issues on Windows
+        if sys.platform == 'win32':
+            import io
+            sys.stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8')
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-        file_path = input_data.get('file_path')
+        input_data = json.load(sys.stdin)
         forecast_days = input_data.get('forecast_days', 60)
 
-        # Load data
-        df = pd.read_excel(file_path)
+        # Load data - support both 'data' (JSON array) and 'file_path' (Excel file)
+        if 'data' in input_data and input_data['data']:
+            # Load from JSON data array
+            df = pd.DataFrame(input_data['data'])
+            # Normalize column names
+            df.columns = [c.lower() for c in df.columns]
+            if 'date' in df.columns and 'price' in df.columns:
+                df = df.rename(columns={'date': 'Date', 'price': 'Price'})
+            else:
+                raise ValueError("Data must contain 'date' and 'price' fields")
+        elif 'file_path' in input_data:
+            # Load from Excel file (legacy support)
+            file_path = input_data['file_path']
+            df = pd.read_excel(file_path)
+            
+            # Normalize columns
+            df.columns = [c.strip() for c in df.columns]
+            date_col = next((c for c in df.columns if c.lower() == 'date'), None)
+            price_col = next((c for c in df.columns if c.lower() == 'price'), None)
+            
+            if not date_col or not price_col:
+                raise ValueError("Excel file must contain 'Date' and 'Price' columns")
+                
+            df = df.rename(columns={date_col: 'Date', price_col: 'Price'})
+        else:
+            raise ValueError("Input must contain either 'data' or 'file_path'")
+
+        # Convert date and aggregate
         df['Date'] = pd.to_datetime(df['Date'])
         df = df.groupby('Date')['Price'].mean().reset_index()
 

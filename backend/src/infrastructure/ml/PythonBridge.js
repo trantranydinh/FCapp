@@ -42,7 +42,12 @@ class PythonBridge {
       console.log(`[PythonBridge] Input:`, JSON.stringify(inputData).substring(0, 100) + '...');
 
       // Spawn Python process
-      const pythonProcess = spawn('python', [absoluteScriptPath], {
+      // Use 'py -3.10' on Windows to target the specific version with TensorFlow support
+      // On other platforms, try 'python3.10' or fallback to 'python3'
+      const pythonCommand = process.platform === 'win32' ? 'py' : 'python3';
+      const pythonArgs = process.platform === 'win32' ? ['-3.10', absoluteScriptPath] : [absoluteScriptPath];
+
+      const pythonProcess = spawn(pythonCommand, pythonArgs, {
         stdio: ['pipe', 'pipe', 'pipe']
       });
 
@@ -79,7 +84,8 @@ class PythonBridge {
         if (code !== 0) {
           console.error(`[PythonBridge] Python exited with code ${code}`);
           console.error(`[PythonBridge] stderr:`, stderrData);
-          return reject(new Error(`Python process failed with code ${code}: ${stderrData}`));
+          console.error(`[PythonBridge] stdout (might contain error details):`, stdoutData);
+          return reject(new Error(`Python process failed with code ${code}. Stderr: ${stderrData}. Stdout: ${stdoutData}`));
         }
 
         // Parse JSON output
@@ -121,7 +127,10 @@ class PythonBridge {
    */
   async checkPythonAvailable() {
     return new Promise((resolve) => {
-      const pythonProcess = spawn('python', ['--version']);
+      const pythonCommand = process.platform === 'win32' ? 'py' : 'python3';
+      const pythonArgs = process.platform === 'win32' ? ['-3.10', '--version'] : ['--version'];
+
+      const pythonProcess = spawn(pythonCommand, pythonArgs);
       pythonProcess.on('close', (code) => {
         resolve(code === 0);
       });

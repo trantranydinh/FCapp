@@ -23,6 +23,7 @@ import { loadEnvironment, settings } from './settings.js';
 import dashboardRouter from './api/routes/dashboard.routes.js';
 import priceRouter from './api/routes/price.routes.js';
 import lstmRouter from './api/routes/lstm.routes.js';
+import parityRouter from './api/routes/parity.routes.js';
 
 // Infrastructure initialization
 import jsonCache from './infrastructure/data/JSONCache.js';
@@ -130,6 +131,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/price', priceRouter);
 app.use('/api/v1/lstm', lstmRouter);
+app.use('/api/v1/parity', parityRouter);
 
 // ========== ERROR HANDLING MIDDLEWARE ==========
 
