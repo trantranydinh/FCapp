@@ -13,6 +13,7 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -24,6 +25,7 @@ import dashboardRouter from './api/routes/dashboard.routes.js';
 import priceRouter from './api/routes/price.routes.js';
 import lstmRouter from './api/routes/lstm.routes.js';
 import parityRouter from './api/routes/parity.routes.js';
+import authRouter from './api/routes/auth.routes.js';
 
 // Infrastructure initialization
 import jsonCache from './infrastructure/data/JSONCache.js';
@@ -48,6 +50,7 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 app.use(morgan('dev'));
 
 // Static files
@@ -112,6 +115,7 @@ app.get('/', (_req, res) => {
     mode: settings.demoMode ? 'demo' : 'production',
     timestamp: new Date().toISOString(),
     endpoints: {
+      auth: '/api/v1/auth',
       dashboard: '/api/v1/dashboard',
       price: '/api/v1/price',
       lstm: '/api/v1/lstm'
@@ -128,6 +132,7 @@ app.get('/health', (_req, res) => {
 
 // ========== API ROUTES REGISTRATION ==========
 
+app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/price', priceRouter);
 app.use('/api/v1/lstm', lstmRouter);
@@ -192,6 +197,7 @@ async function startServer() {
       console.log('  🚀 Cashew Forecast Backend Server');
       console.log('='.repeat(60));
       console.log(`  📡 Server: http://localhost:${port}`);
+      console.log(`  🔐 Auth API: http://localhost:${port}/api/v1/auth`);
       console.log(`  📊 Dashboard: http://localhost:${port}/api/v1/dashboard`);
       console.log(`  💰 Price API: http://localhost:${port}/api/v1/price`);
       console.log(`  🤖 LSTM API: http://localhost:${port}/api/v1/lstm`);
