@@ -158,7 +158,7 @@ const ParityTool = () => {
                     <CardContent className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium mb-2">
-                                Origin <span className="text-accent">*</span>
+                                * Origin
                             </label>
                             <select
                                 value={formData.origin}
@@ -184,19 +184,38 @@ const ParityTool = () => {
 
                         <div>
                             <label className="block text-sm font-medium mb-2">
-                                RCN CFR ($/MT) <span className="text-accent">*</span>
+                                * RCN CFR ($/MT)
                             </label>
-                            <input
-                                type="number"
-                                value={formData.rcnCfr}
-                                onChange={(e) => handleInputChange("rcnCfr", e.target.value)}
-                                placeholder="1000 - 2500"
-                                step="0.01"
-                                className={`w-full px-4 py-2.5 rounded-lg border ${errors.rcnCfr
-                                    ? "border-accent focus:ring-accent"
-                                    : "border-slate-300 focus:ring-primary"
-                                    } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
-                            />
+                            <div className="relative">
+                                <div className="absolute left-0 top-0 bottom-0 flex flex-col border-r border-slate-300 dark:border-slate-700 w-8 z-10 bg-slate-50 dark:bg-slate-900 rounded-l-lg">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleIncrement("rcnCfr", 10)}
+                                        className="h-1/2 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-800 rounded-tl-lg text-muted-foreground transition-colors"
+                                    >
+                                        <ChevronUp className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDecrement("rcnCfr", 10)}
+                                        className="h-1/2 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-800 rounded-bl-lg border-t border-slate-300 dark:border-slate-700 text-muted-foreground transition-colors"
+                                    >
+                                        <ChevronDown className="h-3 w-3" />
+                                    </button>
+                                </div>
+                                <span className="absolute left-11 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                                <input
+                                    type="number"
+                                    value={formData.rcnCfr}
+                                    onChange={(e) => handleInputChange("rcnCfr", e.target.value)}
+                                    placeholder="1000.00"
+                                    step="0.01"
+                                    className={`w-full pl-16 pr-4 py-2.5 rounded-lg border ${errors.rcnCfr
+                                        ? "border-accent focus:ring-accent"
+                                        : "border-slate-300 focus:ring-primary"
+                                        } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
+                                />
+                            </div>
                             {errors.rcnCfr && (
                                 <p className="mt-1 text-sm text-accent flex items-center gap-1">
                                     <AlertCircle className="h-4 w-4" />
@@ -207,19 +226,37 @@ const ParityTool = () => {
 
                         <div>
                             <label className="block text-sm font-medium mb-2">
-                                Quality KOR (lbs/bag) <span className="text-accent">*</span>
+                                * Quality KOR (lbs/bag)
                             </label>
-                            <input
-                                type="number"
-                                value={formData.qualityKor}
-                                onChange={(e) => handleInputChange("qualityKor", e.target.value)}
-                                placeholder="40 - 60"
-                                step="0.01"
-                                className={`w-full px-4 py-2.5 rounded-lg border ${errors.qualityKor
-                                    ? "border-accent focus:ring-accent"
-                                    : "border-slate-300 focus:ring-primary"
-                                    } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
-                            />
+                            <div className="relative">
+                                <div className="absolute left-0 top-0 bottom-0 flex flex-col border-r border-slate-300 dark:border-slate-700 w-8 z-10 bg-slate-50 dark:bg-slate-900 rounded-l-lg">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleIncrement("qualityKor", 0.5)}
+                                        className="h-1/2 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-800 rounded-tl-lg text-muted-foreground transition-colors"
+                                    >
+                                        <ChevronUp className="h-3 w-3" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDecrement("qualityKor", 0.5)}
+                                        className="h-1/2 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-800 rounded-bl-lg border-t border-slate-300 dark:border-slate-700 text-muted-foreground transition-colors"
+                                    >
+                                        <ChevronDown className="h-3 w-3" />
+                                    </button>
+                                </div>
+                                <input
+                                    type="number"
+                                    value={formData.qualityKor}
+                                    onChange={(e) => handleInputChange("qualityKor", e.target.value)}
+                                    placeholder="48.00"
+                                    step="0.01"
+                                    className={`w-full pl-12 pr-4 py-2.5 rounded-lg border ${errors.qualityKor
+                                        ? "border-accent focus:ring-accent"
+                                        : "border-slate-300 focus:ring-primary"
+                                        } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
+                                />
+                            </div>
                             {errors.qualityKor && (
                                 <p className="mt-1 text-sm text-accent flex items-center gap-1">
                                     <AlertCircle className="h-4 w-4" />
@@ -258,21 +295,22 @@ const ParityTool = () => {
                                 {isCalculating ? (
                                     <>
                                         <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                                        Calculating...
+                                        Checking...
                                     </>
                                 ) : (
                                     <>
-                                        <Calculator className="mr-2 h-4 w-4" />
-                                        Calculate
+                                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                                        Check
                                     </>
                                 )}
                             </Button>
                             <Button
-                                onClick={handleReset}
+                                onClick={handleClear}
                                 variant="outline"
-                                className="border-slate-300"
+                                className="border-slate-300 text-muted-foreground hover:text-accent hover:border-accent"
                             >
-                                Reset
+                                <Eraser className="mr-2 h-4 w-4 text-red-500" />
+                                Clear data
                             </Button>
                         </div>
                     </CardContent>
@@ -293,9 +331,12 @@ const ParityTool = () => {
                                                 Price Ck/lb
                                             </p>
                                         </div>
-                                        <p className="text-3xl font-bold text-primary">
-                                            ${result.priceCkLb}
-                                        </p>
+                                        <div className="flex items-baseline">
+                                            <span className="text-xl font-bold text-primary mr-1">$</span>
+                                            <p className="text-3xl font-bold text-primary">
+                                                {parseFloat(result.priceCkLb).toFixed(2)}
+                                            </p>
+                                        </div>
                                     </div>
                                     <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20">
                                         <div className="flex items-center gap-2 mb-2">
@@ -304,9 +345,12 @@ const ParityTool = () => {
                                                 Price Ck/kg
                                             </p>
                                         </div>
-                                        <p className="text-3xl font-bold text-primary">
-                                            ${result.priceCkKg}
-                                        </p>
+                                        <div className="flex items-baseline">
+                                            <span className="text-xl font-bold text-primary mr-1">$</span>
+                                            <p className="text-3xl font-bold text-primary">
+                                                {parseFloat(result.priceCkKg).toFixed(2)}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -321,11 +365,11 @@ const ParityTool = () => {
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="text-sm text-muted-foreground">RCN CFR</span>
-                                            <span className="font-medium">${result.rcnCfr}/MT</span>
+                                            <span className="font-medium">${parseFloat(result.rcnCfr).toFixed(2)}/MT</span>
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="text-sm text-muted-foreground">Quality KOR</span>
-                                            <span className="font-medium">{result.qualityKor} lbs/bag</span>
+                                            <span className="font-medium">{parseFloat(result.qualityKor).toFixed(2)} lbs/bag</span>
                                         </div>
                                     </div>
                                 </div>
@@ -334,7 +378,7 @@ const ParityTool = () => {
                             <div className="flex flex-col items-center justify-center h-64 text-center">
                                 <Calculator className="h-16 w-16 text-muted-foreground/30 mb-4" />
                                 <p className="text-muted-foreground">
-                                    Enter parameters and click Calculate
+                                    Enter parameters and click Check
                                     <br />
                                     to see the result
                                 </p>
@@ -343,6 +387,58 @@ const ParityTool = () => {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* History Section */}
+            {showHistory && (
+                <Card className="glass-card border-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <History className="h-5 w-5 text-primary" />
+                            Calculation History
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoadingHistory ? (
+                            <div className="flex justify-center py-8">
+                                <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+                            </div>
+                        ) : history.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-xs text-muted-foreground uppercase bg-slate-50 dark:bg-slate-900/50">
+                                        <tr>
+                                            <th className="px-4 py-3 rounded-tl-lg">Time</th>
+                                            <th className="px-4 py-3">Origin</th>
+                                            <th className="px-4 py-3">RCN CFR</th>
+                                            <th className="px-4 py-3">KOR</th>
+                                            <th className="px-4 py-3 text-right rounded-tr-lg">Price Ck/lb</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {history.map((item, index) => (
+                                            <tr key={index} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
+                                                <td className="px-4 py-3">
+                                                    {new Date(item.timestamp || item.created_at).toLocaleString()}
+                                                </td>
+                                                <td className="px-4 py-3 font-medium capitalize">{item.origin}</td>
+                                                <td className="px-4 py-3">${parseFloat(item.rcn_cfr || 0).toFixed(2)}</td>
+                                                <td className="px-4 py-3">{parseFloat(item.quality_kor || 0).toFixed(2)}</td>
+                                                <td className="px-4 py-3 text-right font-bold text-primary">
+                                                    ${parseFloat(item.price_per_lbs || 0).toFixed(2)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No history found
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 };
