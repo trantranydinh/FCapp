@@ -7,7 +7,7 @@ const ORIGINS = [
     { value: "", label: "Select Origin" },
     { value: "tanzania", label: "Tanzania" },
     { value: "ghana", label: "Ghana" },
-    { value: "ivory_coast", label: "IVC" },
+    { value: "IVC", label: "IVC" },
     { value: "cambodia", label: "Cambodia" },
     { value: "vietnam", label: "Vietnam" },
     { value: "nigeria", label: "Nigeria" },
@@ -108,14 +108,11 @@ const ParityTool = () => {
         }
     };
 
-    const handleIncrement = (field, step = 1) => {
-        const currentValue = parseFloat(formData[field]) || 0;
-        handleInputChange(field, (currentValue + step).toFixed(2));
-    };
-
-    const handleDecrement = (field, step = 1) => {
-        const currentValue = parseFloat(formData[field]) || 0;
-        handleInputChange(field, (currentValue - step).toFixed(2));
+    const handleBlur = (field) => {
+        const value = parseFloat(formData[field]);
+        if (!isNaN(value)) {
+            handleInputChange(field, value.toFixed(2));
+        }
     };
 
     const handleClear = () => {
@@ -123,6 +120,14 @@ const ParityTool = () => {
         setErrors({});
         setResult(null);
     };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleCalculate();
+        }
+    };
+
+    const isFormEmpty = !formData.origin && !formData.rcnCfr && !formData.qualityKor && !formData.notes;
 
     return (
         <div className="space-y-6">
@@ -132,7 +137,7 @@ const ParityTool = () => {
                     <div>
                         <CardTitle className="flex items-center gap-2">
                             <Calculator className="h-5 w-5 text-primary" />
-                            Parity Tool
+                            RCN GPT - Kit
                         </CardTitle>
                         <CardDescription>
                             Calculate Price Ck/lb based on RCN CFR and Quality KOR
@@ -150,7 +155,7 @@ const ParityTool = () => {
                 </CardHeader>
             </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" onKeyDown={handleKeyDown}>
                 <Card className="glass-card border-none">
                     <CardHeader>
                         <CardTitle className="text-lg">Input Parameters</CardTitle>
@@ -164,7 +169,7 @@ const ParityTool = () => {
                                 value={formData.origin}
                                 onChange={(e) => handleInputChange("origin", e.target.value)}
                                 className={`w-full px-4 py-2.5 rounded-lg border ${errors.origin
-                                    ? "border-accent focus:ring-accent"
+                                    ? "border-red-500 focus:ring-red-500"
                                     : "border-slate-300 focus:ring-primary"
                                     } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
                             >
@@ -175,7 +180,7 @@ const ParityTool = () => {
                                 ))}
                             </select>
                             {errors.origin && (
-                                <p className="mt-1 text-sm text-accent flex items-center gap-1">
+                                <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
                                     <AlertCircle className="h-4 w-4" />
                                     {errors.origin}
                                 </p>
@@ -187,37 +192,22 @@ const ParityTool = () => {
                                 * RCN CFR ($/MT)
                             </label>
                             <div className="relative">
-                                <div className="absolute left-0 top-0 bottom-0 flex flex-col border-r border-slate-300 dark:border-slate-700 w-8 z-10 bg-slate-50 dark:bg-slate-900 rounded-l-lg">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleIncrement("rcnCfr", 10)}
-                                        className="h-1/2 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-800 rounded-tl-lg text-muted-foreground transition-colors"
-                                    >
-                                        <ChevronUp className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDecrement("rcnCfr", 10)}
-                                        className="h-1/2 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-800 rounded-bl-lg border-t border-slate-300 dark:border-slate-700 text-muted-foreground transition-colors"
-                                    >
-                                        <ChevronDown className="h-3 w-3" />
-                                    </button>
-                                </div>
-                                <span className="absolute left-11 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
                                 <input
                                     type="number"
                                     value={formData.rcnCfr}
                                     onChange={(e) => handleInputChange("rcnCfr", e.target.value)}
-                                    placeholder="1000.00"
+                                    onBlur={() => handleBlur("rcnCfr")}
+                                    placeholder="1000 - 2500"
                                     step="0.01"
-                                    className={`w-full pl-16 pr-4 py-2.5 rounded-lg border ${errors.rcnCfr
-                                        ? "border-accent focus:ring-accent"
+                                    className={`w-full pl-8 pr-4 py-2.5 rounded-lg border ${errors.rcnCfr
+                                        ? "border-red-500 focus:ring-red-500"
                                         : "border-slate-300 focus:ring-primary"
                                         } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
                                 />
                             </div>
                             {errors.rcnCfr && (
-                                <p className="mt-1 text-sm text-accent flex items-center gap-1">
+                                <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
                                     <AlertCircle className="h-4 w-4" />
                                     {errors.rcnCfr}
                                 </p>
@@ -228,37 +218,20 @@ const ParityTool = () => {
                             <label className="block text-sm font-medium mb-2">
                                 * Quality KOR (lbs/bag)
                             </label>
-                            <div className="relative">
-                                <div className="absolute left-0 top-0 bottom-0 flex flex-col border-r border-slate-300 dark:border-slate-700 w-8 z-10 bg-slate-50 dark:bg-slate-900 rounded-l-lg">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleIncrement("qualityKor", 0.5)}
-                                        className="h-1/2 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-800 rounded-tl-lg text-muted-foreground transition-colors"
-                                    >
-                                        <ChevronUp className="h-3 w-3" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDecrement("qualityKor", 0.5)}
-                                        className="h-1/2 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-800 rounded-bl-lg border-t border-slate-300 dark:border-slate-700 text-muted-foreground transition-colors"
-                                    >
-                                        <ChevronDown className="h-3 w-3" />
-                                    </button>
-                                </div>
-                                <input
-                                    type="number"
-                                    value={formData.qualityKor}
-                                    onChange={(e) => handleInputChange("qualityKor", e.target.value)}
-                                    placeholder="48.00"
-                                    step="0.01"
-                                    className={`w-full pl-12 pr-4 py-2.5 rounded-lg border ${errors.qualityKor
-                                        ? "border-accent focus:ring-accent"
-                                        : "border-slate-300 focus:ring-primary"
-                                        } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
-                                />
-                            </div>
+                            <input
+                                type="number"
+                                value={formData.qualityKor}
+                                onChange={(e) => handleInputChange("qualityKor", e.target.value)}
+                                onBlur={() => handleBlur("qualityKor")}
+                                placeholder="40 - 60"
+                                step="0.01"
+                                className={`w-full px-4 py-2.5 rounded-lg border ${errors.qualityKor
+                                    ? "border-red-500 focus:ring-red-500"
+                                    : "border-slate-300 focus:ring-primary"
+                                    } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
+                            />
                             {errors.qualityKor && (
-                                <p className="mt-1 text-sm text-accent flex items-center gap-1">
+                                <p className="mt-1 text-sm text-red-500 flex items-center gap-1">
                                     <AlertCircle className="h-4 w-4" />
                                     {errors.qualityKor}
                                 </p>
@@ -278,8 +251,8 @@ const ParityTool = () => {
                         </div>
 
                         {errors.general && (
-                            <div className="p-3 bg-accent/10 border border-accent rounded-lg">
-                                <p className="text-sm text-accent flex items-center gap-2">
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <p className="text-sm text-red-600 flex items-center gap-2">
                                     <AlertCircle className="h-4 w-4" />
                                     {errors.general}
                                 </p>
@@ -306,10 +279,11 @@ const ParityTool = () => {
                             </Button>
                             <Button
                                 onClick={handleClear}
+                                disabled={isFormEmpty}
                                 variant="outline"
-                                className="border-slate-300 text-muted-foreground hover:text-accent hover:border-accent"
+                                className={`border-slate-300 ${isFormEmpty ? 'opacity-50 cursor-not-allowed' : 'text-muted-foreground hover:text-accent hover:border-accent'}`}
                             >
-                                <Eraser className="mr-2 h-4 w-4 text-red-500" />
+                                <Eraser className={`mr-2 h-4 w-4 ${isFormEmpty ? '' : 'text-red-500'}`} />
                                 Clear data
                             </Button>
                         </div>
@@ -318,39 +292,23 @@ const ParityTool = () => {
 
                 <Card className="glass-card border-none">
                     <CardHeader>
-                        <CardTitle className="text-lg">Calculation Result</CardTitle>
+                        <CardTitle className="text-lg">Result</CardTitle>
                     </CardHeader>
                     <CardContent>
                         {result ? (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <CheckCircle2 className="h-5 w-5 text-success" />
-                                            <p className="text-sm font-medium text-muted-foreground">
-                                                Price Ck/lb
-                                            </p>
-                                        </div>
-                                        <div className="flex items-baseline">
-                                            <span className="text-xl font-bold text-primary mr-1">$</span>
-                                            <p className="text-3xl font-bold text-primary">
-                                                {parseFloat(result.priceCkLb).toFixed(2)}
-                                            </p>
-                                        </div>
+                                <div className="p-8 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20 flex flex-col items-center justify-center text-center">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <CheckCircle2 className="h-6 w-6 text-success" />
+                                        <p className="text-lg font-medium text-muted-foreground">
+                                            Price Ck/lb
+                                        </p>
                                     </div>
-                                    <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <CheckCircle2 className="h-5 w-5 text-success" />
-                                            <p className="text-sm font-medium text-muted-foreground">
-                                                Price Ck/kg
-                                            </p>
-                                        </div>
-                                        <div className="flex items-baseline">
-                                            <span className="text-xl font-bold text-primary mr-1">$</span>
-                                            <p className="text-3xl font-bold text-primary">
-                                                {parseFloat(result.priceCkKg).toFixed(2)}
-                                            </p>
-                                        </div>
+                                    <div className="flex items-baseline justify-center">
+                                        <span className="text-5xl font-bold text-primary mr-1">$</span>
+                                        <p className="text-5xl font-bold text-primary">
+                                            {parseFloat(result.priceCkLb).toFixed(2)}
+                                        </p>
                                     </div>
                                 </div>
 
@@ -376,11 +334,11 @@ const ParityTool = () => {
                             </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center h-64 text-center">
-                                <Calculator className="h-16 w-16 text-muted-foreground/30 mb-4" />
+                                <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
                                 <p className="text-muted-foreground">
-                                    Enter parameters and click Check
+                                    No result yet.
                                     <br />
-                                    to see the result
+                                    Please fill inputs and click Check.
                                 </p>
                             </div>
                         )}
