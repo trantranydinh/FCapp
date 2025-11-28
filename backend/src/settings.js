@@ -1,8 +1,27 @@
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-export const loadEnvironment = () => {
-  dotenv.config({ path: process.env.ENV_FILE || "../.env" });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Define and execute loading immediately
+const loadEnvironment = () => {
+  // Load from backend/.env with absolute path (backend is parent directory of src)
+  const envPath = path.resolve(__dirname, '../.env');
+  const result = dotenv.config({ path: envPath });
+
+  if (result.error) {
+    console.warn('[Settings] Warning: Could not load .env file from:', envPath);
+  } else {
+    console.log('[Settings] ✓ Environment loaded from:', envPath);
+  }
 };
+
+// Execute immediately upon module import
+loadEnvironment();
+
+export { loadEnvironment };
 
 export const settings = {
   port: Number(process.env.BACKEND_PORT || 8000),

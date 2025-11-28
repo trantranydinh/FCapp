@@ -1,18 +1,22 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
-import { Calculator, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Calculator, AlertCircle, CheckCircle2, Eraser, History, ChevronUp, ChevronDown } from "lucide-react";
 
 const ORIGINS = [
     { value: "", label: "Select Origin" },
-    { value: "vietnam", label: "Vietnam" },
-    { value: "cambodia", label: "Cambodia" },
-    { value: "ivory_coast", label: "Ivory Coast" },
     { value: "tanzania", label: "Tanzania" },
-    { value: "benin", label: "Benin" },
-    { value: "burkina_faso", label: "Burkina Faso" },
     { value: "ghana", label: "Ghana" },
+    { value: "ivory_coast", label: "IVC" },
+    { value: "cambodia", label: "Cambodia" },
+    { value: "vietnam", label: "Vietnam" },
     { value: "nigeria", label: "Nigeria" },
+    { value: "benin", label: "Benin" },
+    { value: "india", label: "India" },
+    { value: "bissau", label: "Bissau" },
+    { value: "conakry", label: "Conakry" },
+    { value: "senegal", label: "Senegal" },
+    { value: "indonesia", label: "Indonesia" },
 ];
 
 const ParityTool = () => {
@@ -25,6 +29,28 @@ const ParityTool = () => {
     const [errors, setErrors] = useState({});
     const [result, setResult] = useState(null);
     const [isCalculating, setIsCalculating] = useState(false);
+    const [history, setHistory] = useState([]);
+    const [showHistory, setShowHistory] = useState(false);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+    const fetchHistory = async () => {
+        if (showHistory) {
+            setShowHistory(false);
+            return;
+        }
+
+        setIsLoadingHistory(true);
+        try {
+            const { api } = await import("../lib/apiClient");
+            const response = await api.get('/api/v1/parity/history?limit=20');
+            setHistory(response.data.data);
+            setShowHistory(true);
+        } catch (error) {
+            console.error("Failed to fetch history:", error);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    };
 
     const validateForm = () => {
         const newErrors = {};
@@ -82,7 +108,17 @@ const ParityTool = () => {
         }
     };
 
-    const handleReset = () => {
+    const handleIncrement = (field, step = 1) => {
+        const currentValue = parseFloat(formData[field]) || 0;
+        handleInputChange(field, (currentValue + step).toFixed(2));
+    };
+
+    const handleDecrement = (field, step = 1) => {
+        const currentValue = parseFloat(formData[field]) || 0;
+        handleInputChange(field, (currentValue - step).toFixed(2));
+    };
+
+    const handleClear = () => {
         setFormData({ origin: "", rcnCfr: "", qualityKor: "" });
         setErrors({});
         setResult(null);
@@ -92,14 +128,25 @@ const ParityTool = () => {
         <div className="space-y-6">
             <Card className="glass-card border-none">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary opacity-50" />
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Calculator className="h-5 w-5 text-primary" />
-                        Parity Tool
-                    </CardTitle>
-                    <CardDescription>
-                        Calculate Price Ck/lb based on RCN CFR and Quality KOR
-                    </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="flex items-center gap-2">
+                            <Calculator className="h-5 w-5 text-primary" />
+                            Parity Tool
+                        </CardTitle>
+                        <CardDescription>
+                            Calculate Price Ck/lb based on RCN CFR and Quality KOR
+                        </CardDescription>
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={fetchHistory}
+                        className="gap-2 text-muted-foreground hover:text-primary"
+                    >
+                        <History className="h-4 w-4" />
+                        Detail
+                    </Button>
                 </CardHeader>
             </Card>
 
@@ -117,8 +164,8 @@ const ParityTool = () => {
                                 value={formData.origin}
                                 onChange={(e) => handleInputChange("origin", e.target.value)}
                                 className={`w-full px-4 py-2.5 rounded-lg border ${errors.origin
-                                        ? "border-accent focus:ring-accent"
-                                        : "border-slate-300 focus:ring-primary"
+                                    ? "border-accent focus:ring-accent"
+                                    : "border-slate-300 focus:ring-primary"
                                     } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
                             >
                                 {ORIGINS.map((origin) => (
@@ -146,8 +193,8 @@ const ParityTool = () => {
                                 placeholder="1000 - 2500"
                                 step="0.01"
                                 className={`w-full px-4 py-2.5 rounded-lg border ${errors.rcnCfr
-                                        ? "border-accent focus:ring-accent"
-                                        : "border-slate-300 focus:ring-primary"
+                                    ? "border-accent focus:ring-accent"
+                                    : "border-slate-300 focus:ring-primary"
                                     } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
                             />
                             {errors.rcnCfr && (
@@ -169,8 +216,8 @@ const ParityTool = () => {
                                 placeholder="40 - 60"
                                 step="0.01"
                                 className={`w-full px-4 py-2.5 rounded-lg border ${errors.qualityKor
-                                        ? "border-accent focus:ring-accent"
-                                        : "border-slate-300 focus:ring-primary"
+                                    ? "border-accent focus:ring-accent"
+                                    : "border-slate-300 focus:ring-primary"
                                     } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
                             />
                             {errors.qualityKor && (
@@ -179,6 +226,18 @@ const ParityTool = () => {
                                     {errors.qualityKor}
                                 </p>
                             )}
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium mb-2">
+                                Notes (Optional)
+                            </label>
+                            <textarea
+                                value={formData.notes || ""}
+                                onChange={(e) => handleInputChange("notes", e.target.value)}
+                                placeholder="Add any notes here..."
+                                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-primary focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800 resize-none h-20"
+                            />
                         </div>
 
                         {errors.general && (
@@ -226,16 +285,29 @@ const ParityTool = () => {
                     <CardContent>
                         {result ? (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <CheckCircle2 className="h-5 w-5 text-success" />
-                                        <p className="text-sm font-medium text-muted-foreground">
-                                            Price Ck/lb
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <CheckCircle2 className="h-5 w-5 text-success" />
+                                            <p className="text-sm font-medium text-muted-foreground">
+                                                Price Ck/lb
+                                            </p>
+                                        </div>
+                                        <p className="text-3xl font-bold text-primary">
+                                            ${result.priceCkLb}
                                         </p>
                                     </div>
-                                    <p className="text-4xl font-bold text-primary">
-                                        ${result.priceCkLb}
-                                    </p>
+                                    <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <CheckCircle2 className="h-5 w-5 text-success" />
+                                            <p className="text-sm font-medium text-muted-foreground">
+                                                Price Ck/kg
+                                            </p>
+                                        </div>
+                                        <p className="text-3xl font-bold text-primary">
+                                            ${result.priceCkKg}
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-3 pt-4 border-t">

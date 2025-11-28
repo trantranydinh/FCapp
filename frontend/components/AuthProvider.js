@@ -3,7 +3,7 @@
  * Provides authentication context to the app
  */
 
-import { useEffect, useRef, createContext, useContext } from 'react';
+import { useEffect, useRef, createContext, useContext, useState } from 'react';
 import { useRouter } from 'next/router';
 import authService from '../lib/authService';
 
@@ -18,6 +18,8 @@ export function AuthProvider({ children }) {
   const router = useRouter();
   const isChecking = useRef(false);
 
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     // Prevent multiple simultaneous checks
     if (isChecking.current) return;
@@ -30,23 +32,29 @@ export function AuthProvider({ children }) {
         const pathname = router.pathname;
 
         // If on protected route without auth
-        if (!user && (pathname.startsWith('/dashboard') || pathname.startsWith('/price-forecast') || pathname.startsWith('/market-insights') || pathname.startsWith('/news-watch') || pathname.startsWith('/lstm-demo'))) {
-          router.push('/login');
+        if (!user && (pathname === '/' || pathname.startsWith('/dashboard') || pathname.startsWith('/price-forecast') || pathname.startsWith('/market-insights') || pathname.startsWith('/news-watch') || pathname.startsWith('/lstm-demo'))) {
+          await router.push('/login');
           return;
         }
 
         // If on login page while authenticated
         if (user && pathname === '/login') {
-          router.push('/dashboard');
+          await router.push('/');
           return;
         }
       } finally {
         isChecking.current = false;
+        setIsLoading(false);
       }
     };
 
     checkAuth();
   }, [router.pathname]);
+
+  // Show nothing or loading spinner while checking auth
+  if (isLoading) {
+    return null; // Or a loading spinner component
+  }
 
   return <AuthContext.Provider value={authService}>{children}</AuthContext.Provider>;
 }
@@ -67,8 +75,8 @@ export function useAuth() {
     try {
       const user = await authService.loginWithSSO(email, password);
 
-      // Redirect to dashboard
-      router.replace('/dashboard');
+      // Redirect to home page (section selector)
+      router.replace('/');
 
       return user;
     } catch (error) {

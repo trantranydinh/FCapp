@@ -1,5 +1,6 @@
 import Head from "next/head";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import DashboardLayout from "../components/DashboardLayout";
 import ParityTool from "../components/ParityTool";
 import PriceChart from "../components/PriceChart";
@@ -12,17 +13,28 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../co
 import { Button } from "../components/ui/button";
 import { useDashboardOverview, useHistoricalData, useNewsSummary } from "../hooks/useDashboardData";
 import { api } from "../lib/apiClient";
-import { RefreshCw, ArrowUpRight, Calendar, Download, Calculator, TrendingUp } from "lucide-react";
+import { RefreshCw, ArrowUpRight, Calendar, Download, Calculator, TrendingUp, Home } from "lucide-react";
 
 const DashboardPage = () => {
+  const router = useRouter();
+  const { section } = router.query;
+
   const { data: overview, mutate: refreshOverview } = useDashboardOverview();
   const { data: history, mutate: refreshHistory } = useHistoricalData(12);
   const { data: newsData, mutate: refreshNewsList } = useNewsSummary();
 
-  const [activeTab, setActiveTab] = useState("parity"); // Default to Parity Tool
+  // Set active tab based on URL query parameter, default to parity
+  const [activeTab, setActiveTab] = useState("parity");
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [isRefreshingNews, setIsRefreshingNews] = useState(false);
+
+  // Update active tab when section query parameter changes
+  useEffect(() => {
+    if (section === 'forecast' || section === 'parity') {
+      setActiveTab(section);
+    }
+  }, [section]);
 
   const metrics = overview?.data?.key_metrics;
   const forecast = overview?.data?.latest_forecast?.detailedData;
@@ -74,37 +86,65 @@ const DashboardPage = () => {
     }
   };
 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    router.push(`/dashboard?section=${tab}`, undefined, { shallow: true });
+  };
+
+  const handleBackToHome = () => {
+    router.push('/');
+  };
+
   return (
     <>
       <Head>
-        <title>Dashboard | Cashew Forecast AI</title>
+        <title>{activeTab === 'parity' ? 'Parity Tool' : 'Forecast Price'} | Intersnack Forecast</title>
       </Head>
-      <DashboardLayout title="Dashboard">
+      <DashboardLayout title={activeTab === 'parity' ? 'Parity Tool' : 'Forecast Price'}>
         <div className="space-y-6">
-          {/* Tab Navigation */}
+          {/* Navigation Header */}
           <Card className="glass-card border-none">
-            <CardContent className="p-2">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setActiveTab("parity")}
-                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === "parity"
-                      ? "bg-primary text-white shadow-md"
-                      : "bg-transparent text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
-                    }`}
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-4">
+                {/* Back to Home Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBackToHome}
+                  className="gap-2 border-primary/20 hover:bg-primary/10"
                 >
-                  <Calculator className="h-4 w-4" />
-                  Parity Tool
-                </button>
-                <button
-                  onClick={() => setActiveTab("forecast")}
-                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 ${activeTab === "forecast"
-                      ? "bg-primary text-white shadow-md"
-                      : "bg-transparent text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
-                    }`}
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  Price Forecast
-                </button>
+                  <Home className="h-4 w-4" />
+                  Back to Home
+                </Button>
+
+                {/* Tab Switcher */}
+                <div className="flex-1 flex justify-center">
+                  <div className="inline-flex gap-2 p-1 bg-muted/50 rounded-lg">
+                    <button
+                      onClick={() => handleTabChange("parity")}
+                      className={`py-2 px-6 rounded-md font-medium transition-all duration-300 flex items-center gap-2 ${activeTab === "parity"
+                          ? "bg-primary text-white shadow-md"
+                          : "bg-transparent text-muted-foreground hover:bg-background"
+                        }`}
+                    >
+                      <Calculator className="h-4 w-4" />
+                      Parity Tool
+                    </button>
+                    <button
+                      onClick={() => handleTabChange("forecast")}
+                      className={`py-2 px-6 rounded-md font-medium transition-all duration-300 flex items-center gap-2 ${activeTab === "forecast"
+                          ? "bg-primary text-white shadow-md"
+                          : "bg-transparent text-muted-foreground hover:bg-background"
+                        }`}
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                      Forecast Price
+                    </button>
+                  </div>
+                </div>
+
+                {/* Spacer for balance */}
+                <div className="w-[120px]"></div>
               </div>
             </CardContent>
           </Card>

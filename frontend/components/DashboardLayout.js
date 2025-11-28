@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   TrendingUp,
@@ -26,6 +26,11 @@ const navItems = [
 export default function DashboardLayout({ children, title = "Dashboard", currentPath = "" }) {
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Check if current route matches nav item
   const isActive = (href) => {
@@ -44,7 +49,7 @@ export default function DashboardLayout({ children, title = "Dashboard", current
 
   // Get user initials for avatar
   const getUserInitials = () => {
-    if (!user?.name) return "U";
+    if (!mounted || !user?.name) return "U";
     return user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
@@ -55,39 +60,17 @@ export default function DashboardLayout({ children, title = "Dashboard", current
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Logo & Brand */}
           <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
                 <LayoutDashboard className="h-6 w-6 text-primary-foreground" />
               </div>
               <div className="flex flex-col">
-                <span className="text-lg font-bold text-primary leading-none">Cashew Forecast</span>
+                <span className="text-lg font-bold text-primary leading-none">Intersnack Forecast</span>
                 <span className="text-xs text-muted-foreground">Price Analysis System</span>
               </div>
             </Link>
 
-            {/* Navigation Links - Desktop */}
-            <nav className="hidden md:flex items-center gap-1 ml-4">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link key={item.href} href={item.href}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "transition-all relative h-16 rounded-none",
-                        isActive(item.href)
-                          ? "bg-accent/10 text-accent font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-accent"
-                          : "text-foreground/70 hover:text-accent hover:bg-accent/5"
-                      )}
-                    >
-                      <Icon className="mr-2 h-4 w-4" />
-                      {item.label}
-                    </Button>
-                  </Link>
-                );
-              })}
-            </nav>
+
           </div>
 
           {/* Right Side - Status & User */}
@@ -100,7 +83,7 @@ export default function DashboardLayout({ children, title = "Dashboard", current
 
             {/* Version Badge */}
             <Badge variant="outline" className="hidden sm:inline-flex">
-              v0.2.0
+              v1.0.0
             </Badge>
 
             {/* User Avatar/Menu */}
@@ -155,31 +138,7 @@ export default function DashboardLayout({ children, title = "Dashboard", current
           </div>
         </div>
 
-        {/* Mobile Navigation - Dropdown */}
-        <div className="md:hidden border-t">
-          <nav className="container mx-auto flex overflow-x-auto px-4 py-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link key={item.href} href={item.href}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "whitespace-nowrap transition-all",
-                      isActive(item.href)
-                        ? "bg-accent/10 text-accent font-medium border-b-2 border-accent rounded-b-none"
-                        : "text-foreground/70 hover:text-accent"
-                    )}
-                  >
-                    <Icon className="mr-2 h-4 w-4" />
-                    {item.label}
-                  </Button>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
+
       </header>
 
       {/* Main Content */}
@@ -188,7 +147,7 @@ export default function DashboardLayout({ children, title = "Dashboard", current
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-primary">{title}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time cashew price forecasting and market analysis
+            Advanced market analysis and forecasting platform
           </p>
         </div>
 
@@ -200,7 +159,7 @@ export default function DashboardLayout({ children, title = "Dashboard", current
       <footer className="border-t mt-auto">
         <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>© 2024 Cashew Forecast App. All rights reserved.</p>
+            <p>© 2024 Intersnack Forecast App. All rights reserved.</p>
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-2">
                 API Status: <Badge variant="success" className="text-[10px]">Connected</Badge>
