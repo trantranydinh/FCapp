@@ -39,7 +39,7 @@ export default function Login() {
               <LayoutDashboard className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-center text-primary">Cashew Forecast</h1>
+          <h1 className="text-2xl font-bold text-center text-primary">Intersnack Forecast</h1>
           <p className="text-center text-muted-foreground">
             Sign in to access the forecasting platform
           </p>
@@ -60,7 +60,7 @@ export default function Login() {
               <input
                 id="email"
                 type="email"
-                placeholder="you@cashew.com"
+                placeholder="you@intersnack.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -85,9 +85,9 @@ export default function Login() {
             <div className="text-sm text-muted-foreground">
               <strong>Demo accounts:</strong>
               <ul className="mt-2 space-y-1">
-                <li>• admin@cashew.com (Admin)</li>
-                <li>• user@cashew.com (User)</li>
-                <li>• forecast.analyst@cashew.com (Analyst)</li>
+                <li>• admin@intersnack.com (Admin)</li>
+                <li>• user@intersnack.com (User)</li>
+                <li>• forecast.analyst@intersnack.com (Analyst)</li>
               </ul>
             </div>
           </CardContent>

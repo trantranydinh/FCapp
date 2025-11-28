@@ -3,7 +3,8 @@ import axios from "axios";
 const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 export const api = axios.create({
-  baseURL
+  baseURL,
+  withCredentials: true
 });
 
 export const handleError = (error) => {

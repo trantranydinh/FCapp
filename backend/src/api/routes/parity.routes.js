@@ -5,6 +5,8 @@
  */
 
 import { Router } from 'express';
+import { v4 as uuidv4 } from 'uuid';
+import db from '../../db/mysqlClient.js';
 
 const router = Router();
 
@@ -15,7 +17,7 @@ const router = Router();
 router.post('/calculate', async (req, res, next) => {
     try {
         console.log('[Parity API] POST /calculate');
-        const { origin, rcnCfr, qualityKor } = req.body;
+        const { origin, rcnCfr, qualityKor, notes } = req.body;
 
         // Validation
         if (!origin) {
@@ -38,56 +40,114 @@ router.post('/calculate', async (req, res, next) => {
             });
         }
 
-        // TODO: Replace with actual calculation logic and database storage
-        // For now, using a simplified formula
-        // Price Ck/lb = (RCN CFR / 2204.62) * (Quality KOR / 50) * Origin Factor
+        // Step 1: Get User ID from session email lookup
+        let userId = 1; // Default fallback
 
-        const originFactors = {
-            'vietnam': 1.0,
-            'cambodia': 0.98,
-            'ivory_coast': 1.05,
-            'tanzania': 1.02,
-            'benin': 1.01,
-            'burkina_faso': 1.03,
-            'ghana': 1.04,
-            'nigeria': 0.99
-        };
+        if (req.cookies && req.cookies.session) {
+            try {
+                const sessionUser = JSON.parse(req.cookies.session);
+                const userEmail = sessionUser.email;
 
-        const originFactor = originFactors[origin] || 1.0;
-        const priceCkLb = (rcnValue / 2204.62) * (korValue / 50) * originFactor;
+                if (userEmail) {
+                    // Lookup user ID by email
+                    const [userRows] = await db.query(
+                        'SELECT id FROM users WHERE email = ?',
+                        [userEmail]
+                    );
+
+                    if (userRows && userRows.length > 0) {
+                        userId = userRows[0].id;
+                        console.log(`[Parity API] Found user ID ${userId} for email ${userEmail}`);
+                    } else {
+                        console.warn(`[Parity API] User with email ${userEmail} not found in DB. Using default ID 1.`);
+                    }
+                }
+            } catch (e) {
+                console.error('[Parity API] Error parsing session cookie or looking up user:', e);
+            }
+        }
+
+        const sessionId = uuidv4();
+        const rcnVolume = 1000; // Auto volume as per requirements
+
+        console.log(`[Parity API] Starting calculation session: ${sessionId} for user: ${userId}`);
+
+        // Step 2: Create session
+        // INSERT INTO PTool_calculation_sessions (session_id, user_id) VALUES ...
+        await db.query(
+            `INSERT INTO PTool_calculation_sessions (session_id, user_id) VALUES (?, ?)`,
+            [sessionId, userId]
+        );
+
+        // Step 4: Call stored procedure
+        // CALL PTool_run_parity_v1_0(...)
+        await db.query(
+            `CALL PTool_run_parity_v1_0(?, ?, ?, ?, ?, ?, ?)`,
+            [
+                sessionId,
+                userId,
+                origin,
+                rcnVolume,
+                rcnValue,
+                korValue,
+                notes || null
+            ]
+        );
+
+        // Step 5: Read result
+        // SELECT price_per_kg, price_per_lbs FROM PTool_rcn_parity_calculations ...
+        const [rows] = await db.query(
+            `SELECT price_per_kg, price_per_lbs 
+             FROM PTool_rcn_parity_calculations 
+             WHERE session_id = ? 
+             ORDER BY id DESC 
+             LIMIT 1`,
+            [sessionId]
+        );
+
+        if (!rows || rows.length === 0) {
+            throw new Error('Calculation failed: No result returned from database');
+        }
+
+        const resultData = rows[0];
 
         const result = {
-            priceCkLb: parseFloat(priceCkLb.toFixed(2)),
+            priceCkLb: parseFloat(resultData.price_per_lbs),
+            priceCkKg: parseFloat(resultData.price_per_kg),
             origin,
             rcnCfr: rcnValue,
             qualityKor: korValue,
-            calculatedAt: new Date().toISOString()
+            calculatedAt: new Date().toISOString(),
+            sessionId: sessionId
         };
 
-        // TODO: Save to MySQL database
-        console.log('[Parity API] Calculation result:', result);
+        console.log('[Parity API] Calculation successful:', result);
 
         res.json({ success: true, data: result });
 
     } catch (error) {
         console.error('[Parity API] Calculate failed:', error.message);
+        // If it's a DB error, it might contain sensitive info, but for internal tool it's okay to log
         next(error);
     }
 });
 
 /**
  * GET /api/v1/parity/history
- * Get calculation history (TODO: from MySQL)
+ * Get calculation history
  */
 router.get('/history', async (req, res, next) => {
     try {
         console.log('[Parity API] GET /history');
         const limit = parseInt(req.query.limit || '10', 10);
 
-        // TODO: Fetch from MySQL database
-        const mockHistory = [];
+        // Fetch from MySQL database
+        const [rows] = await db.query(
+            `SELECT * FROM PTool_rcn_parity_calculations ORDER BY timestamp DESC LIMIT ?`,
+            [limit]
+        );
 
-        res.json({ success: true, data: mockHistory });
+        res.json({ success: true, data: rows });
 
     } catch (error) {
         console.error('[Parity API] History failed:', error.message);

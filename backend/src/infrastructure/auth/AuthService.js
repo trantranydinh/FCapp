@@ -7,13 +7,13 @@ class AuthService {
   constructor() {
     // Define admin emails - only these emails have admin access
     this.ADMIN_EMAILS = [
-      'admin@cashew.com',
-      'manager@cashew.com',
-      'operations@cashew.com'
+      'admin@intersnack.com',
+      'manager@intersnack.com',
+      'operations@intersnack.com'
     ];
 
     // Company domain for email validation
-    this.COMPANY_DOMAIN = '@cashew.com';
+    this.COMPANY_DOMAIN = '@intersnack.com';
   }
 
   /**
@@ -109,8 +109,13 @@ class AuthService {
    */
   async authenticateUser(email, password) {
     // Validate email domain
-    if (!email.endsWith(this.COMPANY_DOMAIN)) {
-      throw new Error(`Please use your company email (${this.COMPANY_DOMAIN})`);
+    if (!email.endsWith('@intersnack.com') && !email.endsWith('@intersnack.com.vn')) {
+      throw new Error('Please use your company email (@intersnack.com or @intersnack.com.vn)');
+    }
+
+    // Validate password
+    if (password !== 'Vicc@2025') {
+      throw new Error('Invalid password');
     }
 
     const normalizedEmail = this.normalizeEmail(email);
