@@ -17,5 +17,14 @@ export const settings = {
   openAiKey: process.env.OPENAI_API_KEY || "",
   claudeKey: process.env.ANTHROPIC_API_KEY || "",
   llmMaxCallsPerMinute: Number(process.env.LLM_MAX_CALLS_PER_MIN || 5),
-  llmMaxCallsPerDay: Number(process.env.LLM_MAX_CALLS_PER_DAY || 50)
+  llmMaxCallsPerDay: Number(process.env.LLM_MAX_CALLS_PER_DAY || 50),
+
+  // Database settings
+  dbType: process.env.DB_TYPE || "none", // mysql, postgresql, sqlite, mongodb, none
+  dbHost: process.env.DB_HOST || "localhost",
+  dbPort: Number(process.env.DB_PORT || 3306),
+  dbName: process.env.DB_NAME || "cashew_db",
+  dbUser: process.env.DB_USER || "root",
+  dbPassword: process.env.DB_PASSWORD || "",
+  dbSSL: process.env.DB_SSL === "true"
 };

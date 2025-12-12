@@ -2,6 +2,9 @@ __pycache__/
 *.pyc
 .env
 .env.*
+!.env.example
+!backend/.env.example
+!frontend/.env.example
 .mypy_cache/
 .pytest_cache/
 outputs/

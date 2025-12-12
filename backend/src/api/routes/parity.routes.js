@@ -5,17 +5,19 @@
  */
 
 import { Router } from 'express';
+import databaseAdapter from '../../infrastructure/db/DatabaseAdapter.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
 /**
  * POST /api/v1/parity/calculate
- * Calculate Price Ck/lb based on RCN CFR and Quality KOR
+ * Calculate Price Ck/lb using stored procedure PTool_run_parity_v1_0
  */
 router.post('/calculate', async (req, res, next) => {
     try {
         console.log('[Parity API] POST /calculate');
-        const { origin, rcnCfr, qualityKor } = req.body;
+        const { origin, rcnCfr, qualityKor, rcnVolume, notes } = req.body;
 
         // Validation
         if (!origin) {
@@ -38,36 +40,64 @@ router.post('/calculate', async (req, res, next) => {
             });
         }
 
-        // TODO: Replace with actual calculation logic and database storage
-        // For now, using a simplified formula
-        // Price Ck/lb = (RCN CFR / 2204.62) * (Quality KOR / 50) * Origin Factor
+        // Generate session ID
+        const sessionId = uuidv4();
 
-        const originFactors = {
-            'vietnam': 1.0,
-            'cambodia': 0.98,
-            'ivory_coast': 1.05,
-            'tanzania': 1.02,
-            'benin': 1.01,
-            'burkina_faso': 1.03,
-            'ghana': 1.04,
-            'nigeria': 0.99
+        // Default values
+        const userId = req.user?.id || 1; // From auth middleware, or default to 1
+        const volume = rcnVolume || 77265; // Default production volume
+        const userNotes = notes || null;
+
+        // Check database connection
+        if (!databaseAdapter.isConnected) {
+            await databaseAdapter.connect();
+        }
+
+        // Call stored procedure PTool_run_parity_v1_0
+        console.log('[Parity API] Calling stored procedure PTool_run_parity_v1_0');
+        await databaseAdapter.query(
+            'CALL PTool_run_parity_v1_0(?, ?, ?, ?, ?, ?, ?)',
+            [
+                sessionId,
+                userId,
+                origin,
+                volume,
+                rcnValue,
+                korValue,
+                userNotes
+            ]
+        );
+
+        // Fetch the calculation result
+        const [rows] = await databaseAdapter.query(
+            'SELECT * FROM PTool_rcn_parity_calculations WHERE session_id = ? ORDER BY timestamp DESC LIMIT 1',
+            [sessionId]
+        );
+
+        if (!rows || rows.length === 0) {
+            throw new Error('Calculation completed but result not found');
+        }
+
+        const result = rows[0];
+
+        // Format response
+        const response = {
+            sessionId: result.session_id,
+            priceCkLb: parseFloat(result.price_per_lbs),
+            priceCkKg: parseFloat(result.price_per_kg),
+            origin: result.origin,
+            rcnCfr: parseFloat(result.rcncfr),
+            qualityKor: parseFloat(result.qualitykor),
+            rcnVolume: parseFloat(result.rcnvolume),
+            materialCost: parseFloat(result.material_cost),
+            grossMargin: parseFloat(result.gm),
+            operatingResult: parseFloat(result.operating_result),
+            calculatedAt: result.timestamp
         };
 
-        const originFactor = originFactors[origin] || 1.0;
-        const priceCkLb = (rcnValue / 2204.62) * (korValue / 50) * originFactor;
+        console.log('[Parity API] Calculation successful:', response);
 
-        const result = {
-            priceCkLb: parseFloat(priceCkLb.toFixed(2)),
-            origin,
-            rcnCfr: rcnValue,
-            qualityKor: korValue,
-            calculatedAt: new Date().toISOString()
-        };
-
-        // TODO: Save to MySQL database
-        console.log('[Parity API] Calculation result:', result);
-
-        res.json({ success: true, data: result });
+        res.json({ success: true, data: response });
 
     } catch (error) {
         console.error('[Parity API] Calculate failed:', error.message);
@@ -77,20 +107,66 @@ router.post('/calculate', async (req, res, next) => {
 
 /**
  * GET /api/v1/parity/history
- * Get calculation history (TODO: from MySQL)
+ * Get calculation history from MySQL
  */
 router.get('/history', async (req, res, next) => {
     try {
         console.log('[Parity API] GET /history');
-        const limit = parseInt(req.query.limit || '10', 10);
+        const limit = parseInt(req.query.limit || '20', 10);
 
-        // TODO: Fetch from MySQL database
-        const mockHistory = [];
+        // Check database connection
+        if (!databaseAdapter.isConnected) {
+            await databaseAdapter.connect();
+        }
 
-        res.json({ success: true, data: mockHistory });
+        // Query calculation history
+        const [rows] = await databaseAdapter.query(
+            `SELECT
+                session_id,
+                origin,
+                rcncfr,
+                qualitykor,
+                rcnvolume,
+                price_per_lbs,
+                price_per_kg,
+                material_cost,
+                gm,
+                operating_result,
+                timestamp
+            FROM PTool_rcn_parity_calculations
+            ORDER BY timestamp DESC
+            LIMIT ?`,
+            [limit]
+        );
+
+        // Format response
+        const history = rows.map(row => ({
+            sessionId: row.session_id,
+            origin: row.origin,
+            rcnCfr: parseFloat(row.rcncfr),
+            qualityKor: parseFloat(row.qualitykor),
+            rcnVolume: parseFloat(row.rcnvolume),
+            priceCkLb: parseFloat(row.price_per_lbs),
+            priceCkKg: parseFloat(row.price_per_kg),
+            materialCost: parseFloat(row.material_cost),
+            grossMargin: parseFloat(row.gm),
+            operatingResult: parseFloat(row.operating_result),
+            timestamp: row.timestamp
+        }));
+
+        console.log(`[Parity API] Found ${history.length} history records`);
+
+        res.json({ success: true, data: history });
 
     } catch (error) {
         console.error('[Parity API] History failed:', error.message);
+
+        // If database not available, return empty array
+        if (error.message.includes('not connected') || error.message.includes('ECONNREFUSED')) {
+            console.warn('[Parity API] Database not available, returning empty history');
+            return res.json({ success: true, data: [] });
+        }
+
         next(error);
     }
 });
@@ -99,8 +175,15 @@ router.get('/history', async (req, res, next) => {
  * GET /api/v1/parity/health
  * Health check
  */
-router.get('/health', (_req, res) => {
-    res.json({ success: true, service: 'Parity API', status: 'healthy', timestamp: new Date().toISOString() });
+router.get('/health', async (_req, res) => {
+    const dbStatus = databaseAdapter.isConnected ? 'connected' : 'disconnected';
+    res.json({
+        success: true,
+        service: 'Parity API',
+        status: 'healthy',
+        database: dbStatus,
+        timestamp: new Date().toISOString()
+    });
 });
 
 export default router;
