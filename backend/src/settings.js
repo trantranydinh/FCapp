@@ -7,8 +7,11 @@ const __dirname = path.dirname(__filename);
 
 // Define and execute loading immediately
 const loadEnvironment = () => {
-  // Load from backend/.env with absolute path (backend is parent directory of src)
-  const envPath = path.resolve(__dirname, '../.env');
+  // Load from root .env with absolute path (backend/src -> backend -> root)
+  // Load from root .env with absolute path (backend/src -> backend -> root)
+  console.log('[Settings] Current Dir:', __dirname);
+  const envPath = path.resolve(__dirname, '../../.env');
+  console.log('[Settings] Resolving .env path to:', envPath);
   const result = dotenv.config({ path: envPath });
 
   if (result.error) {

@@ -7,7 +7,7 @@ const ORIGINS = [
     { value: "", label: "Select Origin" },
     { value: "tanzania", label: "Tanzania" },
     { value: "ghana", label: "Ghana" },
-    { value: "ivory_coast", label: "IVC" },
+    { value: "IVC", label: "IVC" },
     { value: "cambodia", label: "Cambodia" },
     { value: "vietnam", label: "Vietnam" },
     { value: "nigeria", label: "Nigeria" },
@@ -32,6 +32,40 @@ const ParityTool = () => {
     const [history, setHistory] = useState([]);
     const [showHistory, setShowHistory] = useState(false);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' });
+
+    // Filter and Sort Logic
+    const filteredHistory = history.filter(item => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            (item.origin && item.origin.toLowerCase().includes(searchLower)) ||
+            (item.rcn_cfr && item.rcn_cfr.toString().includes(searchLower)) ||
+            (item.quality_kor && item.quality_kor.toString().includes(searchLower))
+        );
+    }).sort((a, b) => {
+        if (!sortConfig.key) return 0;
+
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+
+        if (aValue < bValue) {
+            return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+            return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+    });
+
+    const handleSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
 
     const fetchHistory = async () => {
         if (showHistory) {
@@ -95,7 +129,8 @@ const ParityTool = () => {
             const response = await api.post('/api/v1/parity/calculate', formData);
 
             setResult({
-                priceCkLb: response.data.data.priceCkLb,
+                priceCkLb: response.data.priceCkLb,
+                priceCkKg: response.data.priceCkKg,
                 origin: ORIGINS.find((o) => o.value === formData.origin)?.label,
                 rcnCfr: formData.rcnCfr,
                 qualityKor: formData.qualityKor,
@@ -268,7 +303,7 @@ const ParityTool = () => {
                                 )}
                             </Button>
                             <Button
-                                onClick={handleReset}
+                                onClick={handleClear}
                                 variant="outline"
                                 className="border-slate-300"
                             >
@@ -285,27 +320,16 @@ const ParityTool = () => {
                     <CardContent>
                         {result ? (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20">
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20 flex flex-col items-center text-center">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <CheckCircle2 className="h-5 w-5 text-success" />
-                                            <p className="text-sm font-medium text-muted-foreground">
-                                                Price Ck/lb
+                                            <CheckCircle2 className="h-6 w-6 text-success" />
+                                            <p className="text-base font-medium text-muted-foreground">
+                                                Parity Price (Ck/lb)
                                             </p>
                                         </div>
-                                        <p className="text-3xl font-bold text-primary">
-                                            ${result.priceCkLb}
-                                        </p>
-                                    </div>
-                                    <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <CheckCircle2 className="h-5 w-5 text-success" />
-                                            <p className="text-sm font-medium text-muted-foreground">
-                                                Price Ck/kg
-                                            </p>
-                                        </div>
-                                        <p className="text-3xl font-bold text-primary">
-                                            ${result.priceCkKg}
+                                        <p className="text-4xl font-bold text-primary">
+                                            ${result.priceCkLb !== null && result.priceCkLb !== undefined ? result.priceCkLb.toFixed(2) : '0.00'}
                                         </p>
                                     </div>
                                 </div>
@@ -343,6 +367,99 @@ const ParityTool = () => {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* History Section */}
+            {showHistory && (
+                <Card className="glass-card border-none mt-6 animate-in fade-in slide-in-from-bottom-4">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle>Calculation History</CardTitle>
+                        <div className="relative w-64">
+                            <input
+                                type="text"
+                                placeholder="Search history..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-primary focus:ring-2 focus:outline-none bg-white dark:bg-slate-800 text-sm"
+                            />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoadingHistory ? (
+                            <div className="text-center py-4">Loading history...</div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-xs text-muted-foreground uppercase bg-secondary/50">
+                                        <tr>
+                                            <th className="px-4 py-3 cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('timestamp')}>
+                                                <div className="flex items-center gap-1">
+                                                    Time
+                                                    {sortConfig.key === 'timestamp' && (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                                                    )}
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('origin')}>
+                                                <div className="flex items-center gap-1">
+                                                    Origin
+                                                    {sortConfig.key === 'origin' && (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                                                    )}
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('rcn_cfr')}>
+                                                <div className="flex items-center gap-1">
+                                                    RCN Price
+                                                    {sortConfig.key === 'rcn_cfr' && (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                                                    )}
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('quality_kor')}>
+                                                <div className="flex items-center gap-1">
+                                                    KOR
+                                                    {sortConfig.key === 'quality_kor' && (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                                                    )}
+                                                </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-right cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('price_per_lbs')}>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    Price (Ck/lb)
+                                                    {sortConfig.key === 'price_per_lbs' && (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                                                    )}
+                                                </div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredHistory.length > 0 ? (
+                                            filteredHistory.map((item, index) => (
+                                                <tr key={index} className="border-b border-border/50 hover:bg-secondary/20">
+                                                    <td className="px-4 py-3">
+                                                        {new Date(item.timestamp || item.calculation_time || item.created_at).toLocaleString()}
+                                                    </td>
+                                                    <td className="px-4 py-3 capitalize">{item.origin}</td>
+                                                    <td className="px-4 py-3">${item.rcn_cfr}</td>
+                                                    <td className="px-4 py-3">{item.quality_kor}</td>
+                                                    <td className="px-4 py-3 text-right font-medium text-primary">${Number(item.price_per_lbs).toFixed(2)}</td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="5" className="px-4 py-8 text-center text-muted-foreground">
+                                                    No history found.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 };

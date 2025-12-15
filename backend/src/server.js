@@ -87,7 +87,8 @@ function initializeInfrastructure() {
  * Ensure sample data file exists
  */
 async function ensureSampleDataExists() {
-  const fs = await import('fs-extra');
+  const fsModule = await import('fs-extra');
+  const fs = fsModule.default;
   const { formatISO } = await import('date-fns');
 
   const filePath = path.join(settings.dataDir, settings.priceDataFile);
