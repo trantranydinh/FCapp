@@ -5,6 +5,7 @@ import PriceChart from '../components/PriceChart';
 import KpiCardModern from '../components/KpiCardModern';
 import ModelArchitectureViewer from '../components/ModelArchitectureViewer';
 import LossCurveChart from '../components/LossCurveChart';
+// import ForecastNav from '../components/ForecastNav'; // Removed
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';

@@ -1,19 +1,20 @@
 import Head from "next/head";
 import { useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
+// import ForecastNav from "../components/ForecastNav"; // Removed
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { useNewsSummary } from "../hooks/useDashboardData";
 import { Newspaper, Tag, Calendar, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from "lucide-react";
- 
+
 const NewsWatchPage = () => {
   const [limit, setLimit] = useState(5);
   const [expandedItems, setExpandedItems] = useState(new Set());
   const { data, isLoading } = useNewsSummary(limit);
- 
+
   const newsItems = data?.top_news || [];
- 
+
   const toggleExpand = (index) => {
     const newExpanded = new Set(expandedItems);
     if (newExpanded.has(index)) {
@@ -23,7 +24,7 @@ const NewsWatchPage = () => {
     }
     setExpandedItems(newExpanded);
   };
- 
+
   const getImpactBadge = (impact) => {
     const upper = impact?.toUpperCase();
     if (upper === "HIGH" || upper === "NEGATIVE") {
@@ -35,7 +36,7 @@ const NewsWatchPage = () => {
     }
     return { variant: "outline", label: impact || "NEUTRAL" };
   };
- 
+
   return (
     <>
       <Head>
@@ -43,6 +44,7 @@ const NewsWatchPage = () => {
       </Head>
       <DashboardLayout title="News Watch">
         <div className="space-y-6">
+          {/* ForecastNav removed */}
           {/* Controls */}
           <Card>
             <CardHeader>
@@ -74,7 +76,7 @@ const NewsWatchPage = () => {
               </div>
             </CardContent>
           </Card>
- 
+
           {/* News Feed */}
           <Card>
             <CardHeader>
@@ -100,7 +102,7 @@ const NewsWatchPage = () => {
                   {newsItems.map((item, index) => {
                     const isExpanded = expandedItems.has(index);
                     const impactBadge = getImpactBadge(item.impact);
- 
+
                     // Simulate full content if not present (since crawler only gives summary)
                     const fullContent = item.content || `
                       <p class="mb-4"><strong>${item.location || 'GLOBAL'}</strong> — ${item.summary}</p>
@@ -114,7 +116,7 @@ const NewsWatchPage = () => {
                       </ul>
                       <p class="text-sm text-muted-foreground italic">Reported by ${item.source} on ${new Date(item.published_at).toLocaleDateString()}</p>
                     `;
- 
+
                     return (
                       <div
                         key={`${item.title}-${item.published_at || index}`}
@@ -138,7 +140,7 @@ const NewsWatchPage = () => {
                                   <ChevronDown className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
                                 )}
                               </div>
- 
+
                               {/* Meta info */}
                               <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                 {item.source && (
@@ -167,7 +169,7 @@ const NewsWatchPage = () => {
                                   </div>
                                 )}
                               </div>
- 
+
                               {/* Preview Summary (only visible when collapsed) */}
                               {!isExpanded && item.summary && (
                                 <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
@@ -177,12 +179,12 @@ const NewsWatchPage = () => {
                             </div>
                           </div>
                         </div>
- 
+
                         {/* Expanded Content - Full Details */}
                         {isExpanded && (
                           <div className="px-6 pb-6 pt-2 border-t border-border/50 bg-accent/5 animate-in fade-in slide-in-from-top-2 duration-200">
                             <div className="space-y-6">
- 
+
                               {/* AI Insight Box */}
                               {item.ai_implication && (
                                 <div className="bg-primary/5 border border-primary/10 rounded-md p-4 mt-4">
@@ -195,7 +197,7 @@ const NewsWatchPage = () => {
                                   </p>
                                 </div>
                               )}
- 
+
                               {/* Full Article Content */}
                               <div>
                                 <h4 className="font-semibold text-sm mb-3 uppercase tracking-wider text-muted-foreground">Full Article</h4>
@@ -204,7 +206,7 @@ const NewsWatchPage = () => {
                                   dangerouslySetInnerHTML={{ __html: fullContent }}
                                 />
                               </div>
- 
+
                               {/* Tags & Categories */}
                               <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-border/50">
                                 <Tag className="h-4 w-4 text-muted-foreground" />
@@ -219,7 +221,7 @@ const NewsWatchPage = () => {
                                   </Badge>
                                 ))}
                               </div>
- 
+
                               {/* Action Buttons */}
                               <div className="flex justify-end gap-2 pt-2">
                                 <Button variant="outline" size="sm" onClick={() => toggleExpand(index)}>
@@ -249,6 +251,5 @@ const NewsWatchPage = () => {
     </>
   );
 };
- 
+
 export default NewsWatchPage;
- 
