@@ -92,13 +92,37 @@ export default function Login() {
             </div>
           </CardContent>
 
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-4">
             <Button
               type="submit"
               disabled={loading || !email}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {loading ? 'Signing in...' : 'Sign In'}
+            </Button>
+
+            <div className="relative w-full">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-muted" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => window.location.href = 'http://localhost:8000/api/v1/auth/azure/login'}
+              className="w-full gap-2 border-input hover:bg-accent"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 0H10.875V10.875H0V0Z" fill="#F25022" />
+                <path d="M12.125 0H23V10.875H12.125V0Z" fill="#7FBA00" />
+                <path d="M0 12.125H10.875V23H0V12.125Z" fill="#00A4EF" />
+                <path d="M12.125 12.125H23V23H12.125V12.125Z" fill="#FFB900" />
+              </svg>
+              Sign in with Microsoft
             </Button>
           </CardFooter>
         </form>

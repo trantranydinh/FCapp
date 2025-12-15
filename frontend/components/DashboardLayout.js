@@ -83,7 +83,7 @@ export default function DashboardLayout({ children, title = "Dashboard", current
 
             {/* Version Badge */}
             <Badge variant="outline" className="hidden sm:inline-flex">
-              v1.0.0
+              ver2
             </Badge>
 
             {/* User Avatar/Menu */}
@@ -159,7 +159,7 @@ export default function DashboardLayout({ children, title = "Dashboard", current
       <footer className="border-t mt-auto">
         <div className="container mx-auto px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>© 2024 Intersnack Forecast App. All rights reserved.</p>
+            <p>© 2025 Intersnack Forecast App. All rights reserved.</p>
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-2">
                 API Status: <Badge variant="success" className="text-[10px]">Connected</Badge>

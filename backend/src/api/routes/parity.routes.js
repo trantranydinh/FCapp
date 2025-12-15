@@ -40,73 +40,95 @@ router.post('/calculate', async (req, res, next) => {
             });
         }
 
-        // Step 1: Get User ID from session email lookup
-        let userId = 1; // Default fallback
+        // Step 1: Get User ID from session (Legacy INT ID)
+        let userId = 1; // Default fallback for LEGACY ID (INT)
+        let sessionIdUUID = uuidv4(); // Generate UUID for session here
+        let userEmail = null;
 
         if (req.cookies && req.cookies.session) {
             try {
                 const sessionUser = JSON.parse(req.cookies.session);
-                const userEmail = sessionUser.email;
 
-                if (userEmail) {
-                    // Lookup user ID by email
-                    const [userRows] = await db.query(
-                        'SELECT id FROM users WHERE email = ?',
-                        [userEmail]
-                    );
+                // Get Email to lookup ID
+                if (sessionUser && sessionUser.email) {
+                    userEmail = sessionUser.email;
+                }
 
-                    if (userRows && userRows.length > 0) {
-                        userId = userRows[0].id;
-                        console.log(`[Parity API] Found user ID ${userId} for email ${userEmail}`);
-                    } else {
-                        console.warn(`[Parity API] User with email ${userEmail} not found in DB. Using default ID 1.`);
-                    }
+                // Use LEGACY ID (INT) as initial fallback
+                if (sessionUser && sessionUser.legacyId) {
+                    userId = sessionUser.legacyId;
                 }
             } catch (e) {
-                console.error('[Parity API] Error parsing session cookie or looking up user:', e);
+                console.error('[Parity API] Error parsing session cookie:', e);
             }
         }
 
-        const sessionId = uuidv4();
+        // Step 1b: Verify/Lookup ID from DB if email is present
+        if (userEmail) {
+            try {
+                const [rows] = await db.query('SELECT id FROM PTool_users WHERE email = ?', [userEmail]);
+                if (rows && rows.length > 0) {
+                    userId = rows[0].id;
+                    console.log(`[Parity API] Resolved User ID: ${userId} for email: ${userEmail}`);
+                }
+            } catch (dbError) {
+                console.error('[Parity API] DB Lookup Error in Calculate:', dbError);
+            }
+        }
+
+        console.log(`[Parity API] Calculation Request - LegacyUserID: ${userId}, Origin: ${origin}, RCN: ${rcnValue}, KOR: ${korValue}`);
+
         const rcnVolume = 1000; // Auto volume as per requirements
 
-        console.log(`[Parity API] Starting calculation session: ${sessionId} for user: ${userId}`);
-
         // Step 2: Create session
-        // INSERT INTO PTool_calculation_sessions (session_id, user_id) VALUES ...
-        await db.query(
-            `INSERT INTO PTool_calculation_sessions (session_id, user_id) VALUES (?, ?)`,
-            [sessionId, userId]
-        );
+        try {
+            await db.query(
+                `INSERT INTO PTool_calculation_sessions (session_id, user_id) VALUES (?, ?)`,
+                [sessionIdUUID, userId]
+            );
+            console.log(`[Parity API] Session ${sessionIdUUID} created.`);
+        } catch (insertError) {
+            console.error('[Parity API] Failed to create session:', insertError.message);
+        }
 
         // Step 4: Call stored procedure
-        // CALL PTool_run_parity_v1_0(...)
-        await db.query(
-            `CALL PTool_run_parity_v1_0(?, ?, ?, ?, ?, ?, ?)`,
-            [
-                sessionId,
-                userId,
-                origin,
-                rcnVolume,
-                rcnValue,
-                korValue,
-                notes || null
-            ]
-        );
+        try {
+            await db.query(
+                `CALL PTool_run_parity_v1_0(?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    sessionIdUUID,
+                    userId,
+                    origin,
+                    rcnVolume,
+                    rcnValue,
+                    korValue,
+                    notes || null
+                ]
+            );
+            console.log(`[Parity API] Stored Procedure executed.`);
+        } catch (spError) {
+            console.error('[Parity API] Stored Procedure Failed:', spError.message);
+            throw new Error('Calculation Engine Failed: ' + spError.message);
+        }
 
         // Step 5: Read result
-        // SELECT price_per_kg, price_per_lbs FROM PTool_rcn_parity_calculations ...
         const [rows] = await db.query(
             `SELECT price_per_kg, price_per_lbs 
              FROM PTool_rcn_parity_calculations 
              WHERE session_id = ? 
              ORDER BY id DESC 
              LIMIT 1`,
-            [sessionId]
+            [sessionIdUUID]
         );
 
+        console.log(`[Parity API] Result rows found: ${rows ? rows.length : 0}`);
+
         if (!rows || rows.length === 0) {
-            throw new Error('Calculation failed: No result returned from database');
+            // Check if ANY sessions exist (debugging)
+            const [debugCheck] = await db.query('SELECT count(*) as count FROM PTool_calculation_sessions WHERE session_id = ?', [sessionIdUUID]);
+            console.log('[Parity API] Debug - Session exists?', debugCheck[0]);
+
+            throw new Error('Calculation successful but no result returned. Please check input parameters support.');
         }
 
         const resultData = rows[0];
@@ -118,16 +140,14 @@ router.post('/calculate', async (req, res, next) => {
             rcnCfr: rcnValue,
             qualityKor: korValue,
             calculatedAt: new Date().toISOString(),
-            sessionId: sessionId
+            sessionId: sessionIdUUID
         };
 
         console.log('[Parity API] Calculation successful:', result);
-
-        res.json({ success: true, data: result });
+        res.json(result);
 
     } catch (error) {
         console.error('[Parity API] Calculate failed:', error.message);
-        // If it's a DB error, it might contain sensitive info, but for internal tool it's okay to log
         next(error);
     }
 });
@@ -139,15 +159,55 @@ router.post('/calculate', async (req, res, next) => {
 router.get('/history', async (req, res, next) => {
     try {
         console.log('[Parity API] GET /history');
-        const limit = parseInt(req.query.limit || '10', 10);
+        const limit = parseInt(req.query.limit || '20', 10);
 
-        // Fetch from MySQL database
-        const [rows] = await db.query(
-            `SELECT * FROM PTool_rcn_parity_calculations ORDER BY timestamp DESC LIMIT ?`,
-            [limit]
+        // Step 1: Resolve User ID utilizing Email for reliability
+        let userId = 1; // Default fallback used ONLY if absolutely no info found
+        let userEmail = null;
+
+        if (req.cookies && req.cookies.session) {
+            try {
+                const sessionUser = JSON.parse(req.cookies.session);
+                if (sessionUser && sessionUser.email) {
+                    userEmail = sessionUser.email;
+                } else if (sessionUser && sessionUser.legacyId) {
+                    // Fallback if email missing but ID present (unlikely)
+                    userId = sessionUser.legacyId;
+                }
+            } catch (e) {
+                console.error('[Parity API] Error parsing session for history:', e);
+            }
+        }
+
+        // Step 2: If we have an email, Lookup the ID definitively from the DB
+        if (userEmail) {
+            try {
+                const [rows] = await db.query('SELECT id FROM PTool_users WHERE email = ?', [userEmail]);
+                if (rows && rows.length > 0) {
+                    userId = rows[0].id;
+                    console.log(`[Parity API] Resolved User ID: ${userId} for email: ${userEmail}`);
+                } else {
+                    console.warn(`[Parity API] User email ${userEmail} found in session but not in PTool_users. Using default ID: ${userId}`);
+                }
+            } catch (dbError) {
+                console.error('[Parity API] DB Lookup Error:', dbError);
+            }
+        } else {
+            console.warn('[Parity APIHistory] No email found in session. Falling back to default ID.');
+        }
+
+        console.log(`[Parity API] Fetching history for user ID (INT): ${userId}`);
+
+        // Fetch using the User-Specific Stored Procedure
+        const [results] = await db.query(
+            `CALL PTool_sp_get_user_calculation_history(?, ?)`,
+            [userId, limit]
         );
 
-        res.json({ success: true, data: rows });
+        // results[0] contains the actual rows from the SELECT inside the procedure
+        const historyData = results[0] || [];
+
+        res.json({ success: true, data: historyData });
 
     } catch (error) {
         console.error('[Parity API] History failed:', error.message);

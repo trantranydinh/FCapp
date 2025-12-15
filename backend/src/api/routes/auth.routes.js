@@ -5,6 +5,7 @@
 
 import express from 'express';
 import authService from '../../infrastructure/auth/AuthService.js';
+import { settings } from '../../settings.js';
 
 const router = express.Router();
 
@@ -176,6 +177,98 @@ router.get('/me', (req, res) => {
       success: false,
       error: 'Invalid session'
     });
+  }
+});
+
+/**
+ * GET /api/v1/auth/azure/login
+ * Initiate Azure AD SSO
+ */
+router.get('/azure/login', (req, res) => {
+  const authorizationUrl = `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/oauth2/v2.0/authorize` +
+    `?client_id=${process.env.AZURE_AD_CLIENT_ID}` +
+    `&response_type=code` +
+    `&redirect_uri=${encodeURIComponent(process.env.AZURE_AD_REDIRECT_URI)}` +
+    `&response_mode=query` +
+    `&scope=openid%20profile%20email%20User.Read` +
+    `&state=12345`; // Should specific secure state in production
+
+  console.log('[AzureAuth] Redirecting to:', authorizationUrl);
+  res.redirect(authorizationUrl);
+});
+
+/**
+ * GET /api/v1/auth/azure/callback
+ * Handle Azure AD Callback
+ */
+router.get('/azure/callback', async (req, res) => {
+  try {
+    const { code } = req.query;
+
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code missing' });
+    }
+
+    console.log('[AzureAuth] Received code, identifying user...');
+
+    // Exchange code for token
+    const tokenUrl = `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/oauth2/v2.0/token`;
+    const params = new URLSearchParams();
+    params.append('client_id', process.env.AZURE_AD_CLIENT_ID);
+    params.append('scope', 'openid profile email User.Read');
+    params.append('code', code);
+    params.append('redirect_uri', process.env.AZURE_AD_REDIRECT_URI);
+    params.append('grant_type', 'authorization_code');
+    params.append('client_secret', process.env.AZURE_AD_CLIENT_SECRET);
+
+    const tokenResponse = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params
+    });
+
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenResponse.ok) {
+      console.error('[AzureAuth] Token exchange failed:', tokenData);
+      throw new Error('Failed to exchange token');
+    }
+
+    const accessToken = tokenData.access_token;
+
+    // Get User Profile
+    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+
+    const profile = await graphResponse.json();
+    console.log('[AzureAuth] User Profile:', profile.mail || profile.userPrincipalName);
+
+    // Authenticate/Sync User via AuthService
+    const user = await authService.authenticateAzureUser(profile);
+
+    // Set Cookies
+    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+    const cookieConfig = getCookieConfig(isSecure);
+
+    res.cookie('session', JSON.stringify(user), cookieConfig);
+    res.cookie('user_info', JSON.stringify({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      department: user.department,
+      legacyId: user.legacyId // Important for frontend to see
+    }), { ...cookieConfig, httpOnly: false });
+
+    res.cookie('session_timestamp', Date.now().toString(), cookieConfig);
+
+    // Redirect to Dashboard
+    res.redirect('http://localhost:5173/dashboard');
+
+  } catch (error) {
+    console.error('[AzureAuth] Callback Error:', error);
+    res.redirect('http://localhost:5173/login?error=auth_failed');
   }
 });
 
