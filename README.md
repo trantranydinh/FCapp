@@ -88,12 +88,8 @@ The system implements a secure, role-based authentication mechanism.
 *   **Role-Based Access:** Admin, Editor, Viewer roles automatically determined by email domain.
 
 ### Access Levels
-*   **Admin:** `admin@intersnack.com`, `manager@...`
-*   **User:** All other `@intersnack.com` emails.
-
-### Demo Credentials
-*   **Email:** `admin@intersnack.com` (or any valid company email)
-*   **Password:** `Vicc@2025`
+*   **Admin:** Users with administrative privileges.
+*   **User:** Standard access for company employees.
 
 ---
 
@@ -115,9 +111,6 @@ The system implements a secure, role-based authentication mechanism.
 
 ---
 
-## 6. Project Structure
-
-```
 FCapp/
 ├── backend/                  # Node.js API
 │   ├── src/
@@ -127,6 +120,8 @@ FCapp/
 │   │   ├── infrastructure/   # DB, Auth, External Services
 │   │   └── server.js         # Entry Point
 │   └── data/                 # Local data storage (JSON/Excel)
+│
+├── docs/                     # Detailed Documentation
 │
 ├── frontend/                 # Next.js Dashboard
 │   ├── components/           # Reusable UI Components
@@ -140,9 +135,6 @@ FCapp/
 │   └── lstm/                 # LSTM Price Forecaster
 │
 └── README.md                 # This file
-```
-
----
 
 ## 7. Testing & Troubleshooting
 
@@ -153,11 +145,11 @@ FCapp/
 *   *Fix:* Frontend now intelligently parses `timestamp`, `calculation_time`, or `created_at`.
 
 **2. "Network Error" / API Unreachable**
-*   *Check:* Ensure Backend is running on port `8000`.
-*   *Check:* Verify `NEXT_PUBLIC_API_URL` in `frontend/.env`.
+*   *Check:* Ensure Backend is running.
+*   *Check:* Verify `NEXT_PUBLIC_API_URL` configuration.
 
 **3. Login Fails / "User not found"**
-*   *Solution:* Use `admin@intersnack.com` / `Vicc@2025`.
+*   *Solution:* Ensure you are using a valid company email address.
 *   *Note:* The system auto-creates users in the legacy DB upon first login.
 
 ### Running Tests
