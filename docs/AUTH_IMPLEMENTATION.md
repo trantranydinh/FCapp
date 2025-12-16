@@ -55,12 +55,10 @@ GET  /api/v1/auth/me      - Get current user from session
 ## User Roles
 
 ### Admin Emails (Full Access):
-- `admin@cashew.com`
-- `manager@cashew.com`
-- `operations@cashew.com`
+- Users with administrative privileges in the system.
 
 ### Regular Users:
-- Any other email ending with `@cashew.com`
+- Standard access for company employees.
 
 ### Department Detection:
 Departments are auto-detected from email username:
@@ -130,17 +128,6 @@ function LogoutButton() {
   );
 }
 ```
-
-## Demo Accounts
-
-For testing purposes, you can use any email with `@cashew.com` domain:
-
-- **Admin**: `admin@cashew.com`
-- **User**: `user@cashew.com`
-- **Analyst**: `forecast.analyst@cashew.com`
-- **Finance**: `finance.manager@cashew.com`
-
-(No password validation in demo mode)
 
 ## Session Management
 
@@ -214,7 +201,7 @@ npm run dev
 
 3. **Open browser**: http://localhost:3000
 
-4. **Login**: Use any `@cashew.com` email
+4. **Login**: Use a valid company email
 
 5. **Check session**: User info should appear in top-right corner
 
@@ -262,7 +249,6 @@ Check:
 3. Browser is not blocking cookies
 
 ## Future Enhancements
-
 1. **Real SSO Integration**: OAuth 2.0, SAML, or OIDC
 2. **Password Authentication**: Secure password hashing and validation
 3. **Multi-factor Authentication**: SMS, TOTP, or hardware tokens
@@ -271,9 +257,3 @@ Check:
 6. **Rate Limiting**: Prevent brute force attacks
 7. **Remember Me**: Long-lived refresh tokens
 8. **Email Verification**: Verify user email before granting access
-
-## References
-
-- Based on: https://github.com/NganNgoVoThanh/Trips_Management_App
-- Express cookie-parser: https://www.npmjs.com/package/cookie-parser
-- Next.js authentication: https://nextjs.org/docs/authentication
