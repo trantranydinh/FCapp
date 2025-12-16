@@ -9,7 +9,8 @@ import { useMarketSentiment } from "../hooks/useDashboardData";
 import { TrendingUp, TrendingDown, Minus, BarChart3, Activity, AlertCircle, PieChart, ArrowRight } from "lucide-react";
 
 const MarketInsightsPage = () => {
-  const { data } = useMarketSentiment();
+  const { data: apiResponse } = useMarketSentiment();
+  const data = apiResponse?.data; // Extract actual data from API response
 
   // Get sentiment badge
   const getSentimentBadge = (sentiment) => {
@@ -100,7 +101,7 @@ const MarketInsightsPage = () => {
           </div>
 
           {/* Market Insights Feed */}
-          <Card className="glass-card border-none">
+          <Card className="bg-card border border-border shadow-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-primary" />

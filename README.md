@@ -101,7 +101,7 @@ The system implements a secure, role-based authentication mechanism.
 *   **History:** Tracks calculation history per user ID using `PTool_sp_get_user_calculation_history`.
 
 ### B. Price Forecasting (LSTM)
-*   **Data Source:** Historical Excel/CSV uploads.
+*   **Data Source:** Historical Excel/CSV uploads OR **Azure Fabric Lakehouse (SQL)**.
 *   **Model:** Long Short-Term Memory (LSTM) recurrent neural network.
 *   **Output:** 6-12 month price trajectory with confidence intervals.
 

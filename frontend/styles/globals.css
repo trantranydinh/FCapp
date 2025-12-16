@@ -4,74 +4,95 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    /* Light warm gray */
-    --foreground: 0 0% 10%;
+    /* Backgrounds: Off-white / Pale Gray */
+    --background: 210 20% 99%;
+    --foreground: 215 15% 15%;
+    /* Deep Cool Grey */
+
+    /* Surfaces */
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 215 15% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
-    --primary: 0 72% 51%;
-    /* Crimson Red - Intersnack brand color */
+    --popover-foreground: 215 15% 15%;
+
+    /* Primary: Deep Red (Executive decision) */
+    --primary: 350 80% 45%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 60% 96%;
-    --secondary-foreground: 0 72% 35%;
-    --muted: 0 5% 96%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 15 80% 55%;
-    /* Orange-red accent */
+
+    /* Secondary: Cool Grey for hierarchy */
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 215 15% 25%;
+
+    /* Muted / Neutral */
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 10% 45%;
+
+    /* Accent: Used sparingly */
+    --accent: 350 80% 45%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+
+    /* Destructive */
+    --destructive: 0 85% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 10% 90%;
-    --input: 0 10% 90%;
-    --ring: 0 72% 51%;
-    --radius: 0.75rem;
-    --success: 150 100% 33%;
-    --warning: 35 100% 50%;
+
+    /* Borders: Cool Grey */
+    --border: 210 15% 90%;
+    --input: 210 15% 90%;
+    --ring: 350 80% 45%;
+
+    /* Radius: 4-8px */
+    --radius: 0.375rem;
+
+    /* Signals */
+    --success: 210 80% 50%;
+    /* Blue for stability/confidence */
+    --warning: 45 90% 55%;
+    /* Light Yellow for attention */
+    /* Red is already defined as destructive/signal */
   }
 
   .dark {
-    --background: 0 10% 8%;
-    /* Dark red-tinted background */
-    --foreground: 0 0% 98%;
-    --card: 0 15% 12%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 15% 12%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 72% 51%;
-    /* Keep same red for dark mode */
+    --background: 215 20% 10%;
+    --foreground: 210 20% 98%;
+    --card: 215 20% 12%;
+    --card-foreground: 210 20% 98%;
+    --popover: 215 20% 12%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 350 80% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 20% 18%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 15% 15%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 15 80% 55%;
+    --secondary: 215 20% 16%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 20% 16%;
+    --muted-foreground: 215 10% 65%;
+    --accent: 350 80% 55%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 62% 45%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 15% 20%;
-    --input: 0 15% 20%;
-    --ring: 0 72% 51%;
-    --success: 150 100% 33%;
-    --warning: 35 100% 50%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 15% 20%;
+    --input: 215 15% 20%;
+    --ring: 350 80% 55%;
+    --success: 210 80% 50%;
+    --warning: 45 90% 55%;
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    background-image: radial-gradient(at 0% 0%, hsla(0, 72%, 51%, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, hsla(15, 80%, 55%, 0.06) 0px, transparent 50%);
-    background-attachment: fixed;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground antialiased font-sans;
+    /* Clean flat background, no marketing gradients */
+    background-color: hsl(var(--background));
+    font-feature-settings: "cv11", "ss01";
   }
 }
 
 @layer utilities {
   .glass {
-    @apply bg-white/70 dark:bg-black/70 backdrop-blur-md border border-white/20 shadow-sm;
+    @apply bg-white dark:bg-slate-900 border-b border-border;
   }
 
   .glass-card {
-    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 shadow-sm hover:shadow-md transition-all duration-300;
+    @apply bg-card border border-border/60 shadow-none hover:border-primary/50 transition-colors duration-200;
+  }
+
+  .panel-executive {
+    @apply bg-card border border-border shadow-none rounded-md;
   }
 }

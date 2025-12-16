@@ -4,6 +4,7 @@ import DashboardLayout from "../components/DashboardLayout";
 import PriceChart from "../components/PriceChart";
 import KpiCardModern from "../components/KpiCardModern";
 import AIExplained from "../components/AIExplained";
+import ExecutiveOverview from "../components/ExecutiveOverview";
 // import ForecastNav from "../components/ForecastNav"; // Removed
 import FileUploadCard from "../components/FileUploadCard";
 import ForecastStepper from "../components/ForecastStepper";
@@ -23,14 +24,76 @@ const PriceForecastPage = () => {
   const [selectedDays, setSelectedDays] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [dataSource, setDataSource] = useState('upload'); // 'upload' | 'lakehouse'
   const { data: history } = useHistoricalData(12);
+
+  const syncLakehouse = async () => {
+    try {
+      setLoading(true);
+
+      // 1. Sync Data from Lakehouse
+      const syncResponse = await api.post("/api/v1/price/sync-lakehouse", {}, { timeout: 120000 });
+
+      // Handle Device Code Auth Request
+      if (syncResponse && syncResponse.isAuthRequired) {
+        const { userCode, verificationUri } = syncResponse;
+        // Show interactive prompt
+        const shouldOpen = window.confirm(
+          `Authentication Required (Microsoft Device Login)\n\n` +
+          `1. Copy this code: ${userCode}\n` +
+          `2. Click OK to open the login page.\n` +
+          `3. Paste the code and sign in.\n\n` +
+          `After you finish signing in, click the 'Fetch Data' button again.`
+        );
+
+        if (shouldOpen) {
+          window.open(verificationUri, '_blank');
+        }
+        return;
+      }
+
+      if (syncResponse && syncResponse.success) {
+        // 2. Automatically Run Forecast on the new data
+        // Default to 30 days or user selection
+        const days = selectedDays || 30;
+        const forecastResponse = await api.post("/api/v1/price/run-forecast", { forecast_days: days });
+
+        // 3. Trigger Visual Success Workflow
+        // This will animate steps 2 -> 5 and then show the results
+        handleUploadSuccess({ data: { forecast: forecastResponse.data } });
+
+        // Optional: Browser notification
+        if (typeof window !== 'undefined') {
+          window.alert(`Successfully synced ${syncResponse.data?.totalRows || ''} rows from Fabric Lakehouse.\nForecast updated.`);
+        }
+      }
+    } catch (error) {
+      console.error(handleError(error));
+      if (typeof window !== 'undefined') {
+        const msg = error.response?.data?.message || error.message || "Unknown error";
+        // Ignore "Response Sent" error if it leaks
+        if (!msg.includes('RESPONSE_SENT')) {
+          window.alert("Lakehouse Sync Failed: " + msg);
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadLatest = async () => {
     try {
       const response = await api.get("/api/v1/price/latest");
       setForecast(response.data);
     } catch (error) {
-      console.error(handleError(error));
+      // Ignore 404 if no forecast exists yet
+      if (error.response && error.response.status === 404) {
+        setForecast(null);
+        return;
+      }
+      console.error(() => handleError(error)); // Use callback or just log message to avoid throwing in render loop? 
+      // Actually handleError throws. We should simple log it here to avoid crashing the app.
+      console.warn("Failed to load latest forecast:", error.message);
     }
   };
 
@@ -98,12 +161,14 @@ const PriceForecastPage = () => {
         <title>Price Forecast | Cashew Forecast</title>
       </Head>
       <DashboardLayout title="Price Forecast">
-        <div className="space-y-6">
+        <div className="space-y-8">
+          {/* Executive Signal Deck */}
+          <ExecutiveOverview />
+
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Left: Upload & Workflow Panel */}
             <div className="xl:col-span-3 space-y-6">
-              <Card className="glass-card border-none relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary opacity-50" />
+              <Card className="bg-card border border-border shadow-none relative overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Calendar className="h-5 w-5 text-primary" />
@@ -114,11 +179,76 @@ const PriceForecastPage = () => {
                 <CardContent className="space-y-6">
                   <ForecastStepper currentStep={currentStep} />
 
-                  {currentStep === 1 || currentStep === 5 ? (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      <FileUploadCard onUploadSuccess={handleUploadSuccess} />
+                  {/* Data Source Selection */}
+                  {(currentStep === 1 || currentStep === 5) && (
+                    <div className="flex flex-col space-y-4">
+
+                      <div className="flex justify-center pb-2">
+                        <div className="bg-muted p-1 rounded-lg flex gap-1">
+                          <Button
+                            variant={dataSource === 'upload' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setDataSource('upload')}
+                            className="w-32"
+                          >
+                            Upload File
+                          </Button>
+                          <Button
+                            variant={dataSource === 'lakehouse' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setDataSource('lakehouse')}
+                            className="w-32 gap-2"
+                          >
+                            Lakehouse
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {dataSource === 'upload' ? (
+                          <FileUploadCard onUploadSuccess={handleUploadSuccess} />
+                        ) : (
+                          <Card className="border-dashed border-2 border-border/50 bg-accent/5">
+                            <CardContent className="flex flex-col items-center justify-center py-10 text-center space-y-4">
+                              <div className="bg-primary/10 p-4 rounded-full">
+                                <Share2 className="h-8 w-8 text-primary" />
+                              </div>
+                              <div className="space-y-2">
+                                <h3 className="font-semibold text-lg">Connect to Fabric Lakehouse</h3>
+                                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                                  Securely fetch the latest market pricing data directly from your organizational OneLake / SQL Endpoint.
+                                </p>
+                              </div>
+                              <Button
+                                onClick={syncLakehouse}
+                                size="lg"
+                                className="w-48 gap-2"
+                                disabled={loading}
+                              >
+                                {loading ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Syncing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Download className="h-4 w-4" />
+                                    Fetch Data
+                                  </>
+                                )}
+                              </Button>
+                              <p className="text-xs text-muted-foreground pt-2">
+                                Source: <strong>Production Lakehouse (SQL)</strong>
+                              </p>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </div>
                     </div>
-                  ) : (
+                  )}
+
+                  {/* Processing State (Steps 2-4) */}
+                  {(currentStep > 1 && currentStep < 5) && (
                     <div className="h-48 flex flex-col items-center justify-center text-center space-y-4 animate-in fade-in zoom-in duration-300">
                       <div className="relative h-16 w-16">
                         <div className="absolute inset-0 rounded-full border-4 border-muted opacity-20" />
@@ -243,7 +373,7 @@ const PriceForecastPage = () => {
                 ]}
               />
 
-              <Card className="glass-card border-none">
+              <Card className="bg-card border border-border shadow-none">
                 <CardHeader>
                   <CardTitle className="text-base">Forecast Metadata</CardTitle>
                 </CardHeader>

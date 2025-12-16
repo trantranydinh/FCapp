@@ -74,10 +74,11 @@ export default function Home() {
         <div className="w-full max-w-5xl z-10">
           {/* Header */}
           <div className="text-center mb-12 space-y-4">
-            <h1 className="text-5xl sm:text-6xl font-bold tracking-tight">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-primary">
-                Intersnack Forecast
-              </span>
+            <div className="h-24 w-auto flex items-center justify-center mb-6">
+              <img src="/logo_intersnack.png" alt="Intersnack" className="h-full w-auto object-contain" />
+            </div>
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
+              Strategic Forecast Platform
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Advanced market analysis and price forecasting platform

@@ -34,9 +34,9 @@ export default function Login() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-              <LayoutDashboard className="h-8 w-8 text-primary-foreground" />
+          <div className="flex items-center justify-center mb-6">
+            <div className="h-16 w-auto flex items-center justify-center">
+              <img src="/logo_intersnack.png" alt="Intersnack" className="h-full w-auto object-contain" />
             </div>
           </div>
           <h1 className="text-2xl font-bold text-center text-primary">Intersnack Forecast</h1>

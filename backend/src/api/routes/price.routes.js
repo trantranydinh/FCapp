@@ -377,4 +377,34 @@ router.use((error, req, res, next) => {
   next(error);
 });
 
+import lakehouseProvider from '../../infrastructure/data/LakehouseProvider.js';
+
+/**
+ * POST /api/v1/price/sync-lakehouse
+ * Connect to Azure Fabric Lakehouse and fetch latest data
+ */
+router.post('/sync-lakehouse', async (req, res, next) => {
+  try {
+    console.log('[Price API] POST /sync-lakehouse');
+    // const userId = req.user?.id || 'demo_user';
+    const userId = 'demo_user'; // Simplified for now
+
+    const result = await lakehouseProvider.fetchAndSaveToLocal(userId, 1000, res);
+
+    // If result is null, it means auth response was sent or handled internally
+    if (!result) return;
+
+    // We can optionally trigger the forecast run immediately here, 
+    // but better to let the frontend decide (return file details)
+    res.json({
+      success: true,
+      message: 'Lakehouse data synced successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('[Price API] Lakehouse sync failed:', error.message);
+    next(error);
+  }
+});
+
 export default router;
