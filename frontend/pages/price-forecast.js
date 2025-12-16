@@ -4,6 +4,9 @@ import DashboardLayout from "../components/DashboardLayout";
 import PriceChart from "../components/PriceChart";
 import KpiCardModern from "../components/KpiCardModern";
 import AIExplained from "../components/AIExplained";
+// import ForecastNav from "../components/ForecastNav"; // Removed
+import FileUploadCard from "../components/FileUploadCard";
+import ForecastStepper from "../components/ForecastStepper";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -18,6 +21,8 @@ const PriceForecastPage = () => {
   const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedDays, setSelectedDays] = useState(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const { data: history } = useHistoricalData(12);
 
   const loadLatest = async () => {
@@ -45,6 +50,25 @@ const PriceForecastPage = () => {
       setLoading(false);
     }
   };
+
+  const handleUploadSuccess = (data) => {
+    setUploadSuccess(true);
+    setCurrentStep(2);
+
+    // Simulate workflow steps
+    setTimeout(() => setCurrentStep(3), 1500);
+    setTimeout(() => setCurrentStep(4), 3000);
+    setTimeout(() => {
+      setCurrentStep(5);
+      if (data && data.data && data.data.forecast) {
+        setForecast(data.data.forecast);
+      } else {
+        loadLatest();
+      }
+      setUploadSuccess(false);
+    }, 4500);
+  };
+
 
   // Get trend direction
   const getTrend = (percentage) => {
@@ -75,6 +99,44 @@ const PriceForecastPage = () => {
       </Head>
       <DashboardLayout title="Price Forecast">
         <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Left: Upload & Workflow Panel */}
+            <div className="xl:col-span-3 space-y-6">
+              <Card className="glass-card border-none relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary opacity-50" />
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    Forecast Workflow
+                  </CardTitle>
+                  <CardDescription>Upload data to generate real-time AI price predictions</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <ForecastStepper currentStep={currentStep} />
+
+                  {currentStep === 1 || currentStep === 5 ? (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <FileUploadCard onUploadSuccess={handleUploadSuccess} />
+                    </div>
+                  ) : (
+                    <div className="h-48 flex flex-col items-center justify-center text-center space-y-4 animate-in fade-in zoom-in duration-300">
+                      <div className="relative h-16 w-16">
+                        <div className="absolute inset-0 rounded-full border-4 border-muted opacity-20" />
+                        <div className="absolute inset-0 rounded-full border-4 border-t-accent border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+                        <div className="absolute inset-0 flex items-center justify-center font-bold text-xl text-accent">
+                          AI
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">Processing Data...</h3>
+                        <p className="text-sm text-muted-foreground">Running LSTM Neural Network Analysis</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
 
           {/* Top Controls & KPIs */}
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
@@ -210,8 +272,8 @@ const PriceForecastPage = () => {
               </Card>
             </div>
           </div>
-        </div>
-      </DashboardLayout>
+        </div >
+      </DashboardLayout >
     </>
   );
 };

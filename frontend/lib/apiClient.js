@@ -10,7 +10,13 @@ export const api = axios.create({
 export const handleError = (error) => {
   if (error.response) {
     // Backend responded with error
-    throw new Error(error.response.data?.message || "Request failed");
+    console.error("[API Error]", {
+      status: error.response.status,
+      url: error.response.config?.url,
+      data: error.response.data
+    });
+    const backendMessage = error.response.data?.message || error.response.data?.error;
+    throw new Error(backendMessage || `Request failed with status ${error.response.status}`);
   }
 
   // Network error - likely backend not running

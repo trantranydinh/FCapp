@@ -2,6 +2,7 @@ import Head from "next/head";
 import DashboardLayout from "../components/DashboardLayout";
 import KpiCardModern from "../components/KpiCardModern";
 import MarketHeatmap from "../components/MarketHeatmap";
+// import ForecastNav from "../components/ForecastNav"; // Removed
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { useMarketSentiment } from "../hooks/useDashboardData";
@@ -50,6 +51,7 @@ const MarketInsightsPage = () => {
       </Head>
       <DashboardLayout title="Market Insights">
         <div className="space-y-6">
+          {/* ForecastNav removed */}
 
           {/* Top Section: KPIs & Heatmap */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
