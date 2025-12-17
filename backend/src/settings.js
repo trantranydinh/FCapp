@@ -41,6 +41,11 @@ export const settings = {
   llmMaxCallsPerMinute: Number(process.env.LLM_MAX_CALLS_PER_MIN || 5),
   llmMaxCallsPerDay: Number(process.env.LLM_MAX_CALLS_PER_DAY || 50),
 
+  // External APIs
+  newsApiKey: process.env.NEWS_API_KEY || "",
+  serpApiKey: process.env.SERP_API_KEY || "",     // Google/SerpAPI
+  bingApiKey: process.env.BING_API_KEY || "",
+
   // Database Configuration
   dbType: process.env.DB_TYPE || "none", // postgresql, mysql, sqlite, mongodb, none
   dbHost: process.env.DB_HOST || "localhost",

@@ -161,8 +161,7 @@ const ParityTool = () => {
 
     return (
         <div className="space-y-6">
-            <Card className="glass-card border-none">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary opacity-50" />
+            <Card className="bg-card border border-border shadow-none">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle className="flex items-center gap-2">
@@ -186,7 +185,7 @@ const ParityTool = () => {
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="glass-card border-none">
+                <Card className="bg-card border border-border shadow-none">
                     <CardHeader>
                         <CardTitle className="text-lg">Input Parameters</CardTitle>
                     </CardHeader>
@@ -313,7 +312,7 @@ const ParityTool = () => {
                     </CardContent>
                 </Card>
 
-                <Card className="glass-card border-none">
+                <Card className="bg-card border border-border shadow-none">
                     <CardHeader>
                         <CardTitle className="text-lg">Calculation Result</CardTitle>
                     </CardHeader>

@@ -7,5 +7,9 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "mssql": "^12.2.0",
+    "tedious": "^19.1.3"
   }
 }

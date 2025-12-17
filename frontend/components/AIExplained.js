@@ -13,9 +13,6 @@ export default function AIExplained({
 }) {
     return (
         <Card className="glass-card border-none overflow-hidden relative">
-            {/* Background Gradient/Glow */}
-            <div className="absolute -right-10 -top-10 h-32 w-32 bg-primary/10 rounded-full blur-3xl" />
-
             <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                     <div className="p-1.5 rounded-lg bg-accent/10 text-accent">
@@ -27,7 +24,7 @@ export default function AIExplained({
 
             <CardContent className="space-y-4">
                 {/* AI Summary */}
-                <div className="p-3 rounded-lg bg-background/50 border border-white/5 text-sm leading-relaxed">
+                <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-sm leading-relaxed">
                     <span className="font-semibold text-primary mr-1">AI Analysis:</span>
                     {summary}
                 </div>
@@ -40,11 +37,9 @@ export default function AIExplained({
                     </div>
                     <div className="h-2 w-full bg-muted/50 rounded-full overflow-hidden">
                         <div
-                            className="h-full bg-gradient-to-r from-primary/50 to-primary relative"
+                            className="h-full bg-primary relative"
                             style={{ width: `${confidence}%` }}
-                        >
-                            <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/50 animate-pulse" />
-                        </div>
+                        />
                     </div>
                 </div>
 
@@ -53,10 +48,10 @@ export default function AIExplained({
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Top Influencing Factors</p>
                     <div className="space-y-2">
                         {factors.map((factor, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 rounded-md hover:bg-white/5 transition-colors group">
+                            <div key={index} className="flex items-center justify-between p-2 rounded-md hover:bg-secondary transition-colors group">
                                 <div className="flex items-center gap-2">
-                                    <div className={`h-1.5 w-1.5 rounded-full ${factor.direction === 'positive' ? 'bg-emerald-500' :
-                                            factor.direction === 'negative' ? 'bg-red-500' : 'bg-yellow-500'
+                                    <div className={`h-1.5 w-1.5 rounded-full ${factor.direction === 'positive' ? 'bg-success' :
+                                        factor.direction === 'negative' ? 'bg-destructive' : 'bg-warning'
                                         }`} />
                                     <span className="text-sm font-medium">{factor.name}</span>
                                 </div>

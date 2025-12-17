@@ -149,8 +149,8 @@ class PriceOrchestrator {
       const forecasts = await jsonCache.listForecasts();
 
       if (forecasts.length === 0) {
-        console.log('[PriceOrchestrator] No cached forecasts found, generating new forecast');
-        return this.runForecast(60); // Generate default 60-day forecast
+        console.log('[PriceOrchestrator] No cached forecasts found.');
+        return null;
       }
 
       return forecasts[forecasts.length - 1];

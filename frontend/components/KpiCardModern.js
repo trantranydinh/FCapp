@@ -13,21 +13,21 @@ export default function KpiCardModern({
   trend = "neutral" // "up", "down", "neutral"
 }) {
   const TrendIcon = trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : Minus;
-  
-  // Dynamic color based on trend
-  const trendColor = trend === "up" 
-    ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20" 
-    : trend === "down" 
-    ? "text-red-600 bg-red-50 dark:bg-red-900/20" 
-    : "text-gray-600 bg-gray-50 dark:bg-gray-800/50";
 
-  const iconColor = trend === "up" ? "text-emerald-600" : trend === "down" ? "text-red-600" : "text-primary";
+  // Dynamic color based on trend
+  const trendColor = trend === "up"
+    ? "text-success bg-success/10"
+    : trend === "down"
+      ? "text-destructive bg-destructive/10"
+      : "text-muted-foreground bg-secondary";
+
+  const iconColor = trend === "up" ? "text-success" : trend === "down" ? "text-destructive" : "text-primary";
 
   return (
-    <Card className="glass-card border-none overflow-hidden relative group">
+    <Card className="bg-card border border-border shadow-none overflow-hidden relative group">
       {/* Subtle gradient overlay on hover */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-      
+
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
         <CardTitle className="text-sm font-medium text-muted-foreground">
           {title}

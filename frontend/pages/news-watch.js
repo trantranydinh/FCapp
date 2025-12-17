@@ -1,252 +1,279 @@
 import Head from "next/head";
 import { useState } from "react";
 import DashboardLayout from "../components/DashboardLayout";
-// import ForecastNav from "../components/ForecastNav"; // Removed
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
+import { Dialog, DialogContent } from "../components/ui/dialog";
 import { useNewsSummary } from "../hooks/useDashboardData";
-import { Newspaper, Tag, Calendar, TrendingUp, TrendingDown, ChevronDown, ChevronUp } from "lucide-react";
+import { Newspaper, Tag, Calendar, TrendingUp, TrendingDown, ChevronDown, ChevronUp, X, ExternalLink, Search, Loader2 } from "lucide-react";
+import { useSWRConfig } from "swr"; // Import for global mutate
 
 const NewsWatchPage = () => {
-  const [limit, setLimit] = useState(5);
-  const [expandedItems, setExpandedItems] = useState(new Set());
+  const [limit, setLimit] = useState(9); // Default to 9 for grid
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const { data, isLoading } = useNewsSummary(limit);
+  const { mutate } = useSWRConfig();
 
-  const newsItems = data?.top_news || [];
+  // Access the nested data property from the API response
+  const newsItems = data?.data?.top_news || [];
 
-  const toggleExpand = (index) => {
-    const newExpanded = new Set(expandedItems);
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index);
-    } else {
-      newExpanded.add(index);
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    setIsRefreshing(true);
+    try {
+      // Trigger backend crawl
+      const response = await fetch('/api/v1/dashboard/news-refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywords: [searchQuery], limit: limit })
+      });
+
+      if (response.ok) {
+        // Revalidate SWR cache to show new data
+        mutate(`/api/v1/dashboard/news-summary?limit=${limit}`);
+        setSearchQuery(""); // Optional: clear or keep
+      }
+    } catch (err) {
+      console.error("Search failed", err);
+    } finally {
+      setIsRefreshing(false);
     }
-    setExpandedItems(newExpanded);
   };
 
-  const getImpactBadge = (impact) => {
-    const upper = impact?.toUpperCase();
-    if (upper === "HIGH" || upper === "NEGATIVE") {
-      return { variant: "destructive", label: impact };
-    } else if (upper === "POSITIVE") {
-      return { variant: "success", label: impact };
-    } else if (upper === "MEDIUM") {
-      return { variant: "warning", label: impact };
-    }
-    return { variant: "outline", label: impact || "NEUTRAL" };
+  // Helper to generate a consistent placeholder image based on index/category
+  const getPlaceholderImage = (index) => {
+    // Reliable static Unsplash IDs for demo to avoid broken "source.unsplash.com" links
+    const placeholders = [
+      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80", // Food/General
+      "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&q=80", // Agriculture
+      "https://images.unsplash.com/photo-1611974765270-ca12586343bb?w=800&q=80", // Chart
+      "https://images.unsplash.com/photo-1566385101042-1a0aa0c1268c?w=800&q=80", // Logistics
+      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80", // Strategy
+      "https://images.unsplash.com/photo-1559825481-12a05cc00344?w=800&q=80"  // Market
+    ];
+    return placeholders[index % placeholders.length];
   };
 
   return (
     <>
       <Head>
-        <title>News Watch | Cashew Forecast</title>
+        <title>Market Insights | Intersnack Forecast</title>
       </Head>
-      <DashboardLayout title="News Watch">
-        <div className="space-y-6">
-          {/* ForecastNav removed */}
-          {/* Controls */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Newspaper className="h-5 w-5" />
-                News Feed Settings
-              </CardTitle>
-              <CardDescription>
-                Configure how many recent news articles to display
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <label htmlFor="limit" className="text-sm font-medium">
-                  Number of articles:
-                </label>
-                <div className="flex gap-2">
-                  {[3, 5, 10, 20].map((value) => (
-                    <Button
-                      key={value}
-                      onClick={() => setLimit(value)}
-                      variant={limit === value ? "default" : "outline"}
-                      size="sm"
-                    >
-                      {value}
-                    </Button>
-                  ))}
+      <DashboardLayout title="Market Insights">
+        <div className="space-y-10 max-w-[1600px] mx-auto">
+          {/* 1. Editorial Header */}
+          <div className="flex flex-col md:flex-row justify-between items-end border-b border-border pb-6 gap-6">
+            <div className="space-y-3 max-w-2xl">
+              <h1 className="text-4xl font-light tracking-tight text-foreground">
+                Market <span className="font-semibold text-primary">Beat</span>
+              </h1>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Curated intelligence on global cashew markets, supply chain disruptions, and price movements.
+              </p>
+            </div>
+
+            {/* Filter and Search Controls */}
+            <div className="flex flex-col items-end gap-3">
+              {/* Search Form */}
+              <form onSubmit={handleSearch} className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search topics (e.g. Vietnam)..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="bg-secondary/50 border border-border rounded-full pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-64 transition-all"
+                  />
                 </div>
+                <Button type="submit" size="sm" disabled={isRefreshing} className="rounded-full px-4">
+                  {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
+                </Button>
+              </form>
+
+              {/* Limit Toggles */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground mr-2">Show:</span>
+                {[6, 9, 12].map((value) => (
+                  <button
+                    key={value}
+                    onClick={() => setLimit(value)}
+                    className={`px-3 py-1 text-xs rounded-full transition-all ${limit === value
+                      ? "bg-foreground text-background font-medium"
+                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                      }`}
+                  >
+                    {value}
+                  </button>
+                ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* News Feed */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Latest Market News</CardTitle>
-                  <CardDescription>
-                    Click on any article to view full details
-                  </CardDescription>
+          {/* 2. News Grid (Editorial Layout) */}
+          {isLoading || isRefreshing ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-pulse">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="space-y-4">
+                  <div className="h-64 bg-secondary rounded-2xl w-full" />
+                  <div className="h-4 bg-secondary w-1/3 rounded" />
+                  <div className="h-8 bg-secondary w-full rounded" />
+                  <div className="h-20 bg-secondary w-full rounded" />
                 </div>
-                <Badge variant="outline">
-                  {newsItems.length} {newsItems.length === 1 ? "article" : "articles"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex h-64 items-center justify-center text-muted-foreground">
-                  <p>Loading news...</p>
-                </div>
-              ) : newsItems.length > 0 ? (
-                <div className="space-y-4">
-                  {newsItems.map((item, index) => {
-                    const isExpanded = expandedItems.has(index);
-                    const impactBadge = getImpactBadge(item.impact);
+              ))}
+            </div>
+          ) : newsItems.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+              {newsItems.map((item, index) => {
+                // Fallback image logic
+                // Prioritize direct image, then Unsplash valid ID
+                let imageUrl = item.image_url;
+                if (!imageUrl || imageUrl.includes('source.unsplash.com')) {
+                  imageUrl = getPlaceholderImage(index);
+                }
 
-                    // Simulate full content if not present (since crawler only gives summary)
-                    const fullContent = item.content || `
-                      <p class="mb-4"><strong>${item.location || 'GLOBAL'}</strong> — ${item.summary}</p>
-                      <p class="mb-4">According to recent reports from ${item.source}, the market is witnessing significant shifts due to ${item.tags?.[0] || 'market forces'}. Traders and processors are advised to monitor these developments closely.</p>
-                      <p class="mb-4">"The current trend indicates a ${item.impact?.toLowerCase() || 'neutral'} outlook for the coming weeks," stated a senior analyst at ${item.source}. "We are seeing increased activity in the ${item.category} sector which may influence short-term pricing."</p>
-                      <p>Key takeaways for stakeholders:</p>
-                      <ul class="list-disc pl-5 mb-4 space-y-1">
-                        <li>Monitor daily price fluctuations in major trading hubs.</li>
-                        <li>Review inventory levels in light of potential supply chain disruptions.</li>
-                        <li>Consider hedging strategies if volatility increases.</li>
-                      </ul>
-                      <p class="text-sm text-muted-foreground italic">Reported by ${item.source} on ${new Date(item.published_at).toLocaleDateString()}</p>
-                    `;
-
-                    return (
-                      <div
-                        key={`${item.title}-${item.published_at || index}`}
-                        className={`rounded-lg border transition-all duration-200 ${isExpanded ? 'bg-card ring-1 ring-primary/20 shadow-md' : 'bg-card hover:bg-accent/50'}`}
-                      >
-                        {/* Clickable Header Area */}
-                        <div
-                          className="p-5 cursor-pointer"
-                          onClick={() => toggleExpand(index)}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 space-y-3">
-                              <div className="flex items-start justify-between gap-3">
-                                {/* Title - NO EXTERNAL LINK */}
-                                <h3 className="font-semibold leading-tight text-lg group-hover:text-primary transition-colors">
-                                  {item.title}
-                                </h3>
-                                {isExpanded ? (
-                                  <ChevronUp className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
-                                ) : (
-                                  <ChevronDown className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" />
-                                )}
-                              </div>
-
-                              {/* Meta info */}
-                              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                                {item.source && (
-                                  <div className="flex items-center gap-1">
-                                    <Newspaper className="h-3 w-3" />
-                                    <span className="font-medium">{item.source}</span>
-                                  </div>
-                                )}
-                                {item.published_at && (
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    <span>{new Date(item.published_at).toLocaleDateString()}</span>
-                                  </div>
-                                )}
-                                {item.impact && (
-                                  <Badge variant={impactBadge.variant} className="text-xs">
-                                    {impactBadge.label}
-                                  </Badge>
-                                )}
-                                {item.reliability && (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-muted-foreground">Reliability:</span>
-                                    <span className="font-semibold text-primary">
-                                      {Math.round(item.reliability * 100)}%
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Preview Summary (only visible when collapsed) */}
-                              {!isExpanded && item.summary && (
-                                <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-                                  {item.summary}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Expanded Content - Full Details */}
-                        {isExpanded && (
-                          <div className="px-6 pb-6 pt-2 border-t border-border/50 bg-accent/5 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <div className="space-y-6">
-
-                              {/* AI Insight Box */}
-                              {item.ai_implication && (
-                                <div className="bg-primary/5 border border-primary/10 rounded-md p-4 mt-4">
-                                  <h4 className="font-semibold text-sm mb-2 flex items-center gap-2 text-primary">
-                                    <TrendingUp className="h-4 w-4" />
-                                    AI Market Analysis
-                                  </h4>
-                                  <p className="text-sm text-foreground/80 leading-relaxed">
-                                    {item.ai_implication}
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* Full Article Content */}
-                              <div>
-                                <h4 className="font-semibold text-sm mb-3 uppercase tracking-wider text-muted-foreground">Full Article</h4>
-                                <div
-                                  className="prose prose-sm dark:prose-invert max-w-none text-foreground/90 leading-relaxed"
-                                  dangerouslySetInnerHTML={{ __html: fullContent }}
-                                />
-                              </div>
-
-                              {/* Tags & Categories */}
-                              <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-border/50">
-                                <Tag className="h-4 w-4 text-muted-foreground" />
-                                {item.category && (
-                                  <Badge variant="outline" className="uppercase text-[10px]">
-                                    {item.category}
-                                  </Badge>
-                                )}
-                                {item.tags && item.tags.map((tag, tagIndex) => (
-                                  <Badge key={tagIndex} variant="secondary" className="text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-
-                              {/* Action Buttons */}
-                              <div className="flex justify-end gap-2 pt-2">
-                                <Button variant="outline" size="sm" onClick={() => toggleExpand(index)}>
-                                  Close Details
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                return (
+                  <article
+                    key={index}
+                    className="group flex flex-col space-y-4 cursor-pointer"
+                    onClick={() => setSelectedArticle({ ...item, _resolvedImage: imageUrl })}
+                  >
+                    {/* Image Card */}
+                    <div className="relative overflow-hidden rounded-2xl aspect-[4/3] bg-secondary border border-border/50">
+                      <img
+                        src={imageUrl}
+                        alt={item.title}
+                        className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
+                        onError={(e) => { e.target.src = getPlaceholderImage(index + 1); }}
+                      />
+                      <div className="absolute top-4 left-4">
+                        <Badge className="bg-white/90 text-foreground hover:bg-white border-0 shadow-sm backdrop-blur-sm">
+                          {item.category || item.source || 'News'}
+                        </Badge>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex h-64 items-center justify-center text-muted-foreground">
-                  <div className="text-center space-y-2">
-                    <Newspaper className="h-12 w-12 mx-auto opacity-20" />
-                    <p>No news articles available.</p>
-                    <p className="text-sm">Check back later for updates.</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    </div>
+
+                    {/* Content */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        <span>{new Date(item.published_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span className="w-1 h-1 rounded-full bg-border" />
+                        <span className="text-primary">{item.source}</span>
+                      </div>
+
+                      <h2 className="text-xl font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+                        {item.title}
+                      </h2>
+
+                      <p className="text-muted-foreground line-clamp-3 leading-relaxed text-sm">
+                        {item.summary || item.content?.substring(0, 150) + "..."}
+                      </p>
+
+                      <div className="pt-2 flex items-center gap-2 text-sm font-semibold text-foreground group-hover:underline decoration-primary decoration-2 underline-offset-4">
+                        Read Analysis <TrendingUp className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-20 text-center text-muted-foreground">
+              <Newspaper className="h-16 w-16 mx-auto mb-4 opacity-20" />
+              <p className="text-lg">No market insights available at the moment.</p>
+            </div>
+          )}
         </div>
+
+        {/* Article Details Dialog */}
+        <Dialog open={!!selectedArticle} onOpenChange={(open) => !open && setSelectedArticle(null)}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 border-none sm:rounded-2xl">
+            {selectedArticle && (
+              <>
+                <div className="relative h-64 sm:h-80 w-full overflow-hidden">
+                  <img
+                    src={selectedArticle._resolvedImage || selectedArticle.image_url}
+                    alt={selectedArticle.title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.src = getPlaceholderImage(0); }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                  <div className="absolute bottom-0 left-0 p-6 sm:p-8 w-full">
+                    <Badge className="mb-3 bg-primary text-primary-foreground border-none">
+                      {selectedArticle.category || 'Market Update'}
+                    </Badge>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight shadow-sm">
+                      {selectedArticle.title}
+                    </h2>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-4 right-4 text-white hover:bg-black/20 rounded-full"
+                    onClick={() => setSelectedArticle(null)}
+                  >
+                    <X className="h-6 w-6" />
+                  </Button>
+                </div>
+
+                <div className="p-6 sm:p-8 space-y-6 bg-background">
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground border-b border-border pb-6">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      {new Date(selectedArticle.published_at).toLocaleString()}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Newspaper className="h-4 w-4" />
+                      {selectedArticle.source}
+                    </div>
+                    {selectedArticle.reliability && (
+                      <Badge variant="outline" className="ml-auto">
+                        Trust Score: {Math.round(selectedArticle.reliability * 100)}%
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* AI Analysis Box */}
+                  <div className="bg-primary/5 border border-primary/10 rounded-xl p-6">
+                    <h3 className="flex items-center gap-2 font-semibold text-primary mb-3">
+                      <TrendingUp className="h-5 w-5" />
+                      Strategic Implication (AI Summary)
+                    </h3>
+                    <p className="text-foreground/90 leading-relaxed font-medium">
+                      {selectedArticle.ai_implication || selectedArticle.summary || "This development is being monitored for potential impact on the global cashew supply chain."}
+                    </p>
+                  </div>
+
+                  {/* Full Article Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">Full Article</h3>
+                    <div
+                      className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground leading-loose"
+                      dangerouslySetInnerHTML={{ __html: selectedArticle.content || `<p>${selectedArticle.summary}</p>` }}
+                    />
+                  </div>
+
+                  {selectedArticle.url && (
+                    <div className="pt-4">
+                      <Button variant="outline" className="gap-2" asChild>
+                        <a href={selectedArticle.url} target="_blank" rel="noopener noreferrer">
+                          Verify Original Source <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
       </DashboardLayout>
     </>
   );
