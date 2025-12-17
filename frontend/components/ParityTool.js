@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { Button } from "./ui/button";
-import { Calculator, AlertCircle, CheckCircle2, Eraser, History, ChevronUp, ChevronDown } from "lucide-react";
+import { Calculator, AlertCircle, CheckCircle2, Eraser, History, ChevronUp, ChevronDown, ChevronLeft } from "lucide-react";
 
+// ... ORIGINS definition ...
 const ORIGINS = [
     { value: "", label: "Select Origin" },
     { value: "tanzania", label: "Tanzania" },
@@ -20,6 +22,7 @@ const ORIGINS = [
 ];
 
 const ParityTool = () => {
+    const router = useRouter();
     const [formData, setFormData] = useState({
         origin: "",
         rcnCfr: "",
@@ -67,23 +70,30 @@ const ParityTool = () => {
         setSortConfig({ key, direction });
     };
 
-    const fetchHistory = async () => {
-        if (showHistory) {
-            setShowHistory(false);
-            return;
+    // URL Sync for History View
+    useEffect(() => {
+        const isHistoryView = router.asPath.includes('history');
+        if (isHistoryView) {
+            if (!showHistory) {
+                setIsLoadingHistory(true);
+                import("../lib/apiClient").then(({ api }) => {
+                    api.get('/api/v1/parity/history?limit=20')
+                        .then(response => {
+                            setHistory(response.data.data);
+                            setShowHistory(true);
+                        })
+                        .catch(err => console.error("Failed to load history", err))
+                        .finally(() => setIsLoadingHistory(false));
+                });
+            }
+        } else {
+            if (showHistory) setShowHistory(false);
         }
+    }, [router.asPath, showHistory]);
 
-        setIsLoadingHistory(true);
-        try {
-            const { api } = await import("../lib/apiClient");
-            const response = await api.get('/api/v1/parity/history?limit=20');
-            setHistory(response.data.data);
-            setShowHistory(true);
-        } catch (error) {
-            console.error("Failed to fetch history:", error);
-        } finally {
-            setIsLoadingHistory(false);
-        }
+    const handleToggleHistory = () => {
+        const target = showHistory ? '/dashboard' : '/dashboard#history';
+        router.push(target, undefined, { shallow: true });
     };
 
     const validateForm = () => {
@@ -161,217 +171,223 @@ const ParityTool = () => {
 
     return (
         <div className="space-y-6">
-            <Card className="bg-card border border-border shadow-none">
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <div>
-                        <CardTitle className="flex items-center gap-2">
-                            <Calculator className="h-5 w-5 text-primary" />
-                            Parity Tool
-                        </CardTitle>
-                        <CardDescription>
-                            Calculate Price Ck/lb based on RCN CFR and Quality KOR
-                        </CardDescription>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={fetchHistory}
-                        className="gap-2 text-muted-foreground hover:text-primary"
-                    >
-                        <History className="h-4 w-4" />
-                        Detail
-                    </Button>
-                </CardHeader>
-            </Card>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="bg-card border border-border shadow-none">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Input Parameters</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-2">
-                                Origin <span className="text-accent">*</span>
-                            </label>
-                            <select
-                                value={formData.origin}
-                                onChange={(e) => handleInputChange("origin", e.target.value)}
-                                className={`w-full px-4 py-2.5 rounded-lg border ${errors.origin
-                                    ? "border-accent focus:ring-accent"
-                                    : "border-slate-300 focus:ring-primary"
-                                    } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
-                            >
-                                {ORIGINS.map((origin) => (
-                                    <option key={origin.value} value={origin.value}>
-                                        {origin.label}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.origin && (
-                                <p className="mt-1 text-sm text-accent flex items-center gap-1">
-                                    <AlertCircle className="h-4 w-4" />
-                                    {errors.origin}
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium mb-2">
-                                RCN CFR ($/MT) <span className="text-accent">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                value={formData.rcnCfr}
-                                onChange={(e) => handleInputChange("rcnCfr", e.target.value)}
-                                placeholder="1000 - 2500"
-                                step="0.01"
-                                className={`w-full px-4 py-2.5 rounded-lg border ${errors.rcnCfr
-                                    ? "border-accent focus:ring-accent"
-                                    : "border-slate-300 focus:ring-primary"
-                                    } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
-                            />
-                            {errors.rcnCfr && (
-                                <p className="mt-1 text-sm text-accent flex items-center gap-1">
-                                    <AlertCircle className="h-4 w-4" />
-                                    {errors.rcnCfr}
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium mb-2">
-                                Quality KOR (lbs/bag) <span className="text-accent">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                value={formData.qualityKor}
-                                onChange={(e) => handleInputChange("qualityKor", e.target.value)}
-                                placeholder="40 - 60"
-                                step="0.01"
-                                className={`w-full px-4 py-2.5 rounded-lg border ${errors.qualityKor
-                                    ? "border-accent focus:ring-accent"
-                                    : "border-slate-300 focus:ring-primary"
-                                    } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
-                            />
-                            {errors.qualityKor && (
-                                <p className="mt-1 text-sm text-accent flex items-center gap-1">
-                                    <AlertCircle className="h-4 w-4" />
-                                    {errors.qualityKor}
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium mb-2">
-                                Notes (Optional)
-                            </label>
-                            <textarea
-                                value={formData.notes || ""}
-                                onChange={(e) => handleInputChange("notes", e.target.value)}
-                                placeholder="Add any notes here..."
-                                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-primary focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800 resize-none h-20"
-                            />
-                        </div>
-
-                        {errors.general && (
-                            <div className="p-3 bg-accent/10 border border-accent rounded-lg">
-                                <p className="text-sm text-accent flex items-center gap-2">
-                                    <AlertCircle className="h-4 w-4" />
-                                    {errors.general}
-                                </p>
+            {!showHistory ? (
+                <>
+                    <Card className="bg-card border border-border shadow-none">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Calculator className="h-5 w-5 text-primary" />
+                                    Parity Tool
+                                </CardTitle>
+                                <CardDescription>
+                                    Calculate Price Ck/lb based on RCN CFR and Quality KOR
+                                </CardDescription>
                             </div>
-                        )}
-
-                        <div className="flex gap-3 pt-2">
                             <Button
-                                onClick={handleCalculate}
-                                disabled={isCalculating}
-                                className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleToggleHistory}
+                                className="gap-2 text-muted-foreground hover:text-primary"
                             >
-                                {isCalculating ? (
-                                    <>
-                                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                                        Calculating...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Calculator className="mr-2 h-4 w-4" />
-                                        Calculate
-                                    </>
-                                )}
+                                <History className="h-4 w-4" />
+                                Detail
                             </Button>
-                            <Button
-                                onClick={handleClear}
-                                variant="outline"
-                                className="border-slate-300"
-                            >
-                                Reset
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardHeader>
+                    </Card>
 
-                <Card className="bg-card border border-border shadow-none">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Calculation Result</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {result ? (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <div className="grid grid-cols-1 gap-4">
-                                    <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20 flex flex-col items-center text-center">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <CheckCircle2 className="h-6 w-6 text-success" />
-                                            <p className="text-base font-medium text-muted-foreground">
-                                                Parity Price (Ck/lb)
-                                            </p>
-                                        </div>
-                                        <p className="text-4xl font-bold text-primary">
-                                            ${result.priceCkLb !== null && result.priceCkLb !== undefined ? result.priceCkLb.toFixed(2) : '0.00'}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <Card className="bg-card border border-border shadow-none">
+                            <CardHeader>
+                                <CardTitle className="text-lg">Input Parameters</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                        Origin <span className="text-accent">*</span>
+                                    </label>
+                                    <select
+                                        value={formData.origin}
+                                        onChange={(e) => handleInputChange("origin", e.target.value)}
+                                        className={`w-full px-4 py-2.5 rounded-lg border ${errors.origin
+                                            ? "border-accent focus:ring-accent"
+                                            : "border-slate-300 focus:ring-primary"
+                                            } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
+                                    >
+                                        {ORIGINS.map((origin) => (
+                                            <option key={origin.value} value={origin.value}>
+                                                {origin.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.origin && (
+                                        <p className="mt-1 text-sm text-accent flex items-center gap-1">
+                                            <AlertCircle className="h-4 w-4" />
+                                            {errors.origin}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                        RCN CFR ($/MT) <span className="text-accent">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.rcnCfr}
+                                        onChange={(e) => handleInputChange("rcnCfr", e.target.value)}
+                                        placeholder="1000 - 2500"
+                                        step="0.01"
+                                        className={`w-full px-4 py-2.5 rounded-lg border ${errors.rcnCfr
+                                            ? "border-accent focus:ring-accent"
+                                            : "border-slate-300 focus:ring-primary"
+                                            } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
+                                    />
+                                    {errors.rcnCfr && (
+                                        <p className="mt-1 text-sm text-accent flex items-center gap-1">
+                                            <AlertCircle className="h-4 w-4" />
+                                            {errors.rcnCfr}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                        Quality KOR (lbs/bag) <span className="text-accent">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.qualityKor}
+                                        onChange={(e) => handleInputChange("qualityKor", e.target.value)}
+                                        placeholder="40 - 60"
+                                        step="0.01"
+                                        className={`w-full px-4 py-2.5 rounded-lg border ${errors.qualityKor
+                                            ? "border-accent focus:ring-accent"
+                                            : "border-slate-300 focus:ring-primary"
+                                            } focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800`}
+                                    />
+                                    {errors.qualityKor && (
+                                        <p className="mt-1 text-sm text-accent flex items-center gap-1">
+                                            <AlertCircle className="h-4 w-4" />
+                                            {errors.qualityKor}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">
+                                        Notes (Optional)
+                                    </label>
+                                    <textarea
+                                        value={formData.notes || ""}
+                                        onChange={(e) => handleInputChange("notes", e.target.value)}
+                                        placeholder="Add any notes here..."
+                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-primary focus:ring-2 focus:outline-none transition-all bg-white dark:bg-slate-800 resize-none h-20"
+                                    />
+                                </div>
+
+                                {errors.general && (
+                                    <div className="p-3 bg-accent/10 border border-accent rounded-lg">
+                                        <p className="text-sm text-accent flex items-center gap-2">
+                                            <AlertCircle className="h-4 w-4" />
+                                            {errors.general}
                                         </p>
                                     </div>
-                                </div>
+                                )}
 
-                                <div className="space-y-3 pt-4 border-t">
-                                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                                        Input Summary
-                                    </h3>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-muted-foreground">Origin</span>
-                                            <span className="font-medium">{result.origin}</span>
+                                <div className="flex gap-3 pt-2">
+                                    <Button
+                                        onClick={handleCalculate}
+                                        disabled={isCalculating}
+                                        className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                                    >
+                                        {isCalculating ? (
+                                            <>
+                                                <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                                Calculating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Calculator className="mr-2 h-4 w-4" />
+                                                Calculate
+                                            </>
+                                        )}
+                                    </Button>
+                                    <Button
+                                        onClick={handleClear}
+                                        variant="outline"
+                                        className="border-slate-300"
+                                    >
+                                        Reset
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="bg-card border border-border shadow-none">
+                            <CardHeader>
+                                <CardTitle className="text-lg">Calculation Result</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {result ? (
+                                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                        <div className="grid grid-cols-1 gap-4">
+                                            <div className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20 flex flex-col items-center text-center">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <CheckCircle2 className="h-6 w-6 text-success" />
+                                                    <p className="text-base font-medium text-muted-foreground">
+                                                        Parity Price (Ck/lb)
+                                                    </p>
+                                                </div>
+                                                <p className="text-4xl font-bold text-primary">
+                                                    ${result.priceCkLb !== null && result.priceCkLb !== undefined ? result.priceCkLb.toFixed(2) : '0.00'}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-muted-foreground">RCN CFR</span>
-                                            <span className="font-medium">${result.rcnCfr}/MT</span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-muted-foreground">Quality KOR</span>
-                                            <span className="font-medium">{result.qualityKor} lbs/bag</span>
+
+                                        <div className="space-y-3 pt-4 border-t">
+                                            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                                                Input Summary
+                                            </h3>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm text-muted-foreground">Origin</span>
+                                                    <span className="font-medium">{result.origin}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm text-muted-foreground">RCN CFR</span>
+                                                    <span className="font-medium">${result.rcnCfr}/MT</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm text-muted-foreground">Quality KOR</span>
+                                                    <span className="font-medium">{result.qualityKor} lbs/bag</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-64 text-center">
-                                <Calculator className="h-16 w-16 text-muted-foreground/30 mb-4" />
-                                <p className="text-muted-foreground">
-                                    Enter parameters and click Calculate
-                                    <br />
-                                    to see the result
-                                </p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* History Section */}
-            {showHistory && (
-                <Card className="glass-card border-none mt-6 animate-in fade-in slide-in-from-bottom-4">
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-64 text-center">
+                                        <Calculator className="h-16 w-16 text-muted-foreground/30 mb-4" />
+                                        <p className="text-muted-foreground">
+                                            Enter parameters and click Calculate
+                                            <br />
+                                            to see the result
+                                        </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </>
+            ) : (
+                <Card className="glass-card border-none animate-in fade-in slide-in-from-bottom-4">
                     <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle>Calculation History</CardTitle>
+                        <div className="flex items-center gap-4">
+                            <Button variant="ghost" size="sm" onClick={handleToggleHistory} className="-ml-2">
+                                <ChevronLeft className="h-4 w-4 mr-1" /> Back
+                            </Button>
+                            <CardTitle>Calculation History</CardTitle>
+                        </div>
                         <div className="relative w-64">
                             <input
                                 type="text"
