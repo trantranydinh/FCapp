@@ -380,6 +380,36 @@ router.use((error, req, res, next) => {
 import lakehouseProvider from '../../infrastructure/data/LakehouseProvider.js';
 
 /**
+ * GET /api/v1/price/lakehouse-status
+ * Check Lakehouse connection configuration status
+ */
+router.get('/lakehouse-status', (req, res) => {
+  try {
+    console.log('[Price API] GET /lakehouse-status');
+
+    const configStatus = lakehouseProvider.getConfigStatus();
+
+    res.json({
+      success: true,
+      data: {
+        configured: configStatus.configured,
+        authType: configStatus.authType,
+        missing: configStatus.missing,
+        message: configStatus.configured
+          ? 'Lakehouse is configured and ready to connect'
+          : `Missing required environment variables: ${configStatus.missing.join(', ')}`
+      }
+    });
+  } catch (error) {
+    console.error('[Price API] Failed to check lakehouse status:', error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * POST /api/v1/price/sync-lakehouse
  * Connect to Azure Fabric Lakehouse and fetch latest data
  */
@@ -394,7 +424,7 @@ router.post('/sync-lakehouse', async (req, res, next) => {
     // If result is null, it means auth response was sent or handled internally
     if (!result) return;
 
-    // We can optionally trigger the forecast run immediately here, 
+    // We can optionally trigger the forecast run immediately here,
     // but better to let the frontend decide (return file details)
     res.json({
       success: true,

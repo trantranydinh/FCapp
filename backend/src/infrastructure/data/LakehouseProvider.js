@@ -32,8 +32,9 @@ class LakehouseProvider {
             options: {
                 encrypt: true,
                 trustServerCertificate: true,
-                connectTimeout: 60000,
-                requestTimeout: 60000,
+                // Reduced timeouts for faster error detection
+                connectTimeout: 15000, // 15 seconds (was 60s)
+                requestTimeout: 30000, // 30 seconds (was 60s)
                 enableArithAbort: true,
                 // Force TDS 7.4 (Standard for Azure/Fabric)
                 tdsVersion: '7_4'
@@ -61,17 +62,46 @@ class LakehouseProvider {
 
     /**
      * Check if Lakehouse configuration is valid
+     * Returns true if all required configs are set (not empty)
      */
     isConfigured() {
+        // Helper to check if a value is truly set (not empty/whitespace)
+        const isSet = (value) => value && String(value).trim().length > 0;
+
         if (this.authType === 'device_code') {
-            return this.config.server && this.config.database;
+            return isSet(this.config.server) && isSet(this.config.database);
         }
         return (
-            this.config.user &&
-            this.config.password &&
-            this.config.server &&
-            this.config.database
+            isSet(this.config.user) &&
+            isSet(this.config.password) &&
+            isSet(this.config.server) &&
+            isSet(this.config.database)
         );
+    }
+
+    /**
+     * Get detailed configuration status for debugging
+     * @returns {Object} Configuration status with missing fields
+     */
+    getConfigStatus() {
+        const isSet = (value) => value && String(value).trim().length > 0;
+
+        const status = {
+            configured: false,
+            authType: this.authType,
+            missing: []
+        };
+
+        if (!isSet(this.config.server)) status.missing.push('LAKEHOUSE_SERVER');
+        if (!isSet(this.config.database)) status.missing.push('LAKEHOUSE_DATABASE');
+
+        if (this.authType === 'sql_login') {
+            if (!isSet(this.config.user)) status.missing.push('LAKEHOUSE_USER');
+            if (!isSet(this.config.password)) status.missing.push('LAKEHOUSE_PASSWORD');
+        }
+
+        status.configured = status.missing.length === 0;
+        return status;
     }
 
     /**
@@ -152,8 +182,21 @@ class LakehouseProvider {
      * Standardizes the output to match the upload file format (Date, Price)
      */
     async fetchHistoricalPrices(limit = 1000, res = null) {
-        if (!this.isConfigured()) {
-            throw new Error('Lakehouse credentials are not configured in environment variables.');
+        // Check configuration with detailed status
+        const configStatus = this.getConfigStatus();
+
+        if (!configStatus.configured) {
+            const missingVars = configStatus.missing.join(', ');
+            const errorMsg = `Lakehouse configuration incomplete. Missing environment variables: ${missingVars}\n` +
+                           `Please check your .env file and ensure these values are set.\n` +
+                           `See .env.example for configuration instructions.`;
+
+            console.error(`[LakehouseProvider] ❌ Configuration Error:`);
+            console.error(`   Missing: ${missingVars}`);
+            console.error(`   Auth Type: ${configStatus.authType}`);
+            console.error(`   Hint: Copy .env.example to .env and fill in your Fabric Lakehouse details`);
+
+            throw new Error(errorMsg);
         }
 
         console.log(`[LakehouseProvider] Connecting to SQL Endpoint: ${this.config.server} (Port: ${this.config.port}) using ${this.authType}...`);
@@ -207,8 +250,61 @@ class LakehouseProvider {
             if (error.code === 'RESPONSE_SENT') {
                 return null;
             }
-            console.error('[LakehouseProvider] Connection failed:', error.message);
-            throw new Error(`Lakehouse Connection Error: ${error.message}`);
+
+            // Enhanced error messages for common issues
+            let errorMsg = error.message;
+            let troubleshootingHints = [];
+
+            if (error.message.includes('socket hang up') || error.message.includes('ESOCKET')) {
+                errorMsg = 'Connection lost - socket hang up';
+                troubleshootingHints = [
+                    'Check if LAKEHOUSE_SERVER is correct (format: xxxxx.datawarehouse.fabric.microsoft.com)',
+                    'Verify network connectivity to Azure Fabric',
+                    'Ensure port 1433 is not blocked by firewall/VPN',
+                    'Confirm your Azure Fabric Lakehouse is running and accessible',
+                    'Check if SQL endpoint is enabled in your Lakehouse settings'
+                ];
+            } else if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT')) {
+                errorMsg = 'Connection timeout';
+                troubleshootingHints = [
+                    'Server took too long to respond (>15 seconds)',
+                    'Check your network connection',
+                    'Verify VPN connection if required',
+                    'Confirm the server address is reachable'
+                ];
+            } else if (error.message.includes('Login failed') || error.message.includes('authentication')) {
+                errorMsg = 'Authentication failed';
+                troubleshootingHints = [
+                    'Verify your credentials are correct',
+                    'Check if device code authentication completed successfully',
+                    'Ensure you have proper permissions in Azure Fabric'
+                ];
+            } else if (error.message.includes('ENOTFOUND') || error.message.includes('getaddrinfo')) {
+                errorMsg = 'Server not found (DNS resolution failed)';
+                troubleshootingHints = [
+                    'LAKEHOUSE_SERVER address may be incorrect',
+                    'Check for typos in the server address',
+                    'Verify the format: xxxxx.datawarehouse.fabric.microsoft.com'
+                ];
+            }
+
+            console.error('[LakehouseProvider] ❌ Connection Failed');
+            console.error(`   Error: ${errorMsg}`);
+            console.error(`   Server: ${this.config.server}`);
+            console.error(`   Database: ${this.config.database}`);
+            console.error(`   Port: ${this.config.port}`);
+            console.error(`   Auth Type: ${this.authType}`);
+
+            if (troubleshootingHints.length > 0) {
+                console.error('\n   Troubleshooting:');
+                troubleshootingHints.forEach((hint, i) => {
+                    console.error(`   ${i + 1}. ${hint}`);
+                });
+            }
+
+            console.error(`\n   Original Error: ${error.message}`);
+
+            throw new Error(`Lakehouse Error: ${errorMsg}`);
         } finally {
             if (pool) {
                 await pool.close();
