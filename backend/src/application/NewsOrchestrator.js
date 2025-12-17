@@ -98,9 +98,23 @@ class NewsOrchestrator {
       const exists = await fs.pathExists(this.newsFilePath);
 
       if (exists) {
-        const data = await fs.readJson(this.newsFilePath);
-        if (Array.isArray(data) && data.length > 0) {
-          return data;
+        const stats = await fs.stat(this.newsFilePath);
+        const now = new Date();
+        const mtime = new Date(stats.mtime);
+        const ageMinutes = (now - mtime) / (1000 * 60);
+
+        // If file is older than 15 minutes, treat as expired (in dev mode, maybe stricter)
+        const CACHE_TTL_MINUTES = 15;
+
+        if (ageMinutes < CACHE_TTL_MINUTES) {
+          console.log(`[NewsOrchestrator] Serving cache (age: ${Math.round(ageMinutes)}m)`);
+          const data = await fs.readJson(this.newsFilePath);
+          if (Array.isArray(data) && data.length > 0) {
+            return data;
+          }
+        } else {
+          console.log(`[NewsOrchestrator] Cache expired (age: ${Math.round(ageMinutes)}m), refreshing...`);
+          // Proceed to undefined check -> triggers refresh
         }
       }
 

@@ -11,31 +11,67 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  Computer
+  Calculator,
+  History,
+  Lightbulb,
+  Share2,
+  Brain,
+  BookOpen,
+  Clock,
+  Settings,
+  Bell,
+  Database,
+  ShieldCheck
 } from "lucide-react";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 import { useAuth } from "./AuthProvider";
+import { useFavicon } from "../hooks/useFavicon";
 
-const navItems = [
-  { href: "/dashboard", label: "Parity Tool", icon: LayoutDashboard },
+// Define Navigation Structure
+const navSections = [
   {
-    href: "/price-forecast",
-    label: "Forecast Price",
-    icon: TrendingUp,
-    children: [
-      { href: "/price-forecast", label: "Overview", icon: Activity },
-      { href: "/market-insights", label: "Market Insights", icon: BarChart3 },
-      { href: "/news-watch", label: "News Watch", icon: Newspaper },
-      { href: "/decision-tree", label: "Decision Tree", icon: Computer }, // Using Computer icon temporarily or import another
-      { href: "/lstm-demo", label: "LSTM Demo", icon: Activity },
+    type: "section",
+    title: "Parity Tool",
+    items: [
+      { href: "/dashboard", label: "Calculation", icon: Calculator },
+      { href: "/dashboard#history", label: "History", icon: History },
     ]
   },
+  {
+    type: "section",
+    title: "Price Forecast",
+    items: [
+      { href: "/price-forecast", label: "Overview", icon: LayoutDashboard },
+      { href: "/market-insights", label: "Market Signals", icon: BarChart3 },
+      { href: "/news-watch", label: "News Watch", icon: Newspaper },
+      { href: "/reports", label: "Decision Support", icon: Lightbulb },
+      { type: "subheader", label: "Models & Experiments" }, // Sub-section
+      { href: "/decision-tree", label: "Model Logic", icon: Share2 },
+      { href: "/lstm-demo", label: "Forecast Model", icon: Brain },
+    ]
+  },
+  {
+    type: "section",
+    title: "System",
+    items: [
+      { href: "/system", label: "Methodology", icon: BookOpen },
+      { href: "/changelog", label: "Change Log", icon: Clock },
+    ]
+  },
+  {
+    type: "section",
+    title: "App Settings",
+    items: [
+      { href: "/settings", label: "Settings", icon: Settings },
+      { href: "/data-management", label: "Data Management", icon: Database },
+    ]
+  }
 ];
 
 export default function DashboardLayout({ children, title = "Dashboard" }) {
   const { user, logout } = useAuth();
+  const { setFavicon } = useFavicon();
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -54,21 +90,6 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
 
   const currentPath = router.pathname;
 
-  // Helper to determine active state
-  const isItemActive = (href, exact = false) => {
-    if (exact) return currentPath === href;
-    return currentPath === href || currentPath.startsWith(href) && href !== '/dashboard'; // Special case for dashboard root
-  };
-
-  // Check if any child of a parent is active
-  const isParentActive = (item) => {
-    if (item.href === currentPath) return true;
-    if (item.children) {
-      return item.children.some(child => child.href === currentPath);
-    }
-    return false;
-  };
-
   return (
     <div className="flex h-screen bg-background overflow-hidden font-sans text-foreground">
       {/* 🟢 LEFT NAVIGATION RAIL */}
@@ -79,7 +100,7 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
         )}
       >
         {/* Sidebar Header / Logo */}
-        <div className="h-16 flex items-center justify-center border-b border-border bg-secondary">
+        <div className="h-16 flex items-center justify-center border-b border-border bg-secondary shrink-0">
           <div className="flex items-center gap-3">
             <div className="h-8 w-auto flex items-center justify-center">
               <img src="/logo_intersnack.png" alt="Intersnack" className="h-full w-auto object-contain" />
@@ -98,69 +119,86 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 overflow-y-auto py-6 px-2 space-y-1">
-          {navItems.map((item) => {
-            const isActive = isParentActive(item);
-            const isChildrenVisible = isActive && !isCollapsed;
+        <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-6">
+          {navSections.map((section, idx) => (
+            <div key={idx} className="space-y-1">
+              {/* Section Header */}
+              {!isCollapsed && (
+                <h3 className="px-3 text-[10px] uppercase tracking-wider font-bold text-muted-foreground/70 mb-2 select-none">
+                  {section.title}
+                </h3>
+              )}
 
-            return (
-              <div key={item.href} className="space-y-1">
-                {/* Parent Item */}
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "group flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-200",
-                    isActive
-                      ? "bg-white shadow-sm border-l-2 border-primary text-primary" // Active: White bg + Red Border
-                      : "text-muted-foreground hover:bg-white/50 hover:text-foreground"
-                  )}
-                  title={isCollapsed ? item.label : ""}
-                >
-                  <item.icon className={cn(
-                    "h-5 w-5 shrink-0 transition-colors",
-                    isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                  )} />
+              {/* Items */}
+              <div className="space-y-1">
+                {section.items.map((item, i) => {
+                  // Handle Subheaders / Dividers
+                  if (item.type === "subheader") {
+                    return !isCollapsed ? (
+                      <div key={i} className="pt-3 pb-1 px-3">
+                        <div className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/40 border-b border-border/40 pb-1">
+                          {item.label}
+                        </div>
+                      </div>
+                    ) : <div key={i} className="my-2 border-t border-border/50 mx-2" />;
+                  }
 
-                  {!isCollapsed && (
-                    <span className="font-medium text-sm truncate">
-                      {item.label}
-                    </span>
-                  )}
-                </Link>
+                  // Handle Active State (Hash vs Path)
+                  let isActive = router.pathname === item.href;
 
-                {/* Children Items (Sub-menu) */}
-                {item.children && isChildrenVisible && !isCollapsed && (
-                  <div className="ml-4 pl-4 border-l border-border/60 space-y-1 mt-1">
-                    {item.children.map((child) => {
-                      const isChildActive = currentPath === child.href;
-                      return (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          className={cn(
-                            "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all duration-200",
-                            isChildActive
-                              ? "text-primary font-medium bg-primary/5"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          <span>{child.label}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
+                  if (item.href.includes('#')) {
+                    isActive = router.asPath === item.href;
+                  } else if (item.href === '/dashboard') {
+                    // Exact match for Dashboard to avoid conflict with history hash
+                    isActive = router.asPath === '/dashboard' || router.asPath === '/dashboard#';
+                  }
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "group flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200",
+                        isActive
+                          ? "bg-white shadow-sm border-l-2 border-primary text-primary font-medium"
+                          : "text-muted-foreground hover:bg-white/50 hover:text-foreground"
+                      )}
+                      title={isCollapsed ? item.label : ""}
+                    >
+                      <item.icon className={cn(
+                        "h-5 w-5 shrink-0 transition-colors",
+                        isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                      )} />
+
+                      {!isCollapsed && (
+                        <span className="text-sm truncate">
+                          {item.label}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
-            )
-          })}
+            </div>
+          ))}
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-4 border-t border-border bg-secondary">
+        <div className="p-4 border-t border-border bg-secondary shrink-0">
+          {!isCollapsed && (
+            <div className="mb-4 pl-1 space-y-0.5 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <p className="text-xs font-semibold text-foreground/80">FC System – Executive</p>
+              <div className="text-[10px] text-muted-foreground flex flex-col">
+                <span>Version 1.2.0 · Beta</span>
+                <span className="opacity-70">Last updated: Dec 2025</span>
+              </div>
+            </div>
+          )}
+
           <Button
             variant="ghost"
             size="icon"
-            className="w-full h-9 flex items-center justify-center rounded-md hover:bg-white/50 text-muted-foreground"
+            className="w-full h-8 flex items-center justify-center rounded-md hover:bg-white/50 text-muted-foreground"
             onClick={() => setIsCollapsed(!isCollapsed)}
           >
             {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -188,10 +226,10 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
             <div>
               <h1 className="text-lg font-semibold text-foreground tracking-tight">{title}</h1>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.4)]"></span>
                 <span>System Operational</span>
                 <span className="text-border">|</span>
-                <span>Latency: 24ms</span>
+                <span>Latency: {Math.floor(Math.random() * 20 + 15)}ms</span>
               </div>
             </div>
           </div>
@@ -201,7 +239,12 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
             {/* Action Button - Deep Red */}
             <Button
               size="sm"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm border border-transparent"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm border border-transparent active:scale-95 transition-transform"
+              onClick={() => {
+                // Demo: Dynamic Favicon Sequence
+                setFavicon('loading');
+                setTimeout(() => setFavicon('badge', 3), 2000);
+              }}
             >
               <Activity className="w-4 h-4 mr-2" />
               Run Forecast
@@ -227,7 +270,7 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
 
         {/* Main Decision Canvas */}
         <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
-          <div className="max-w-[1600px] mx-auto space-y-6">
+          <div className="max-w-[1700px] mx-auto space-y-6">
             {children}
           </div>
         </main>

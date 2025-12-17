@@ -193,83 +193,146 @@ const NewsWatchPage = () => {
 
         {/* Article Details Dialog */}
         <Dialog open={!!selectedArticle} onOpenChange={(open) => !open && setSelectedArticle(null)}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 border-none sm:rounded-2xl">
+          <DialogContent hideClose={true} className="max-w-2xl max-h-[90vh] overflow-y-auto p-0 gap-0 border-none sm:rounded-2xl">
             {selectedArticle && (
-              <>
-                <div className="relative h-64 sm:h-80 w-full overflow-hidden">
+              <div className="bg-background sm:rounded-2xl overflow-hidden">
+                {/* Visual Header (Compact) */}
+                <div className="relative h-48 w-full bg-secondary">
                   <img
                     src={selectedArticle._resolvedImage || selectedArticle.image_url}
-                    alt={selectedArticle.title}
-                    className="w-full h-full object-cover"
+                    alt=""
+                    className="w-full h-full object-cover opacity-90"
                     onError={(e) => { e.target.src = getPlaceholderImage(0); }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                  <div className="absolute bottom-0 left-0 p-6 sm:p-8 w-full">
-                    <Badge className="mb-3 bg-primary text-primary-foreground border-none">
-                      {selectedArticle.category || 'Market Update'}
-                    </Badge>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-white leading-tight shadow-sm">
-                      {selectedArticle.title}
-                    </h2>
-                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-4 right-4 text-white hover:bg-black/20 rounded-full"
+                    className="absolute top-2 right-2 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-sm"
                     onClick={() => setSelectedArticle(null)}
                   >
-                    <X className="h-6 w-6" />
+                    <X className="h-5 w-5" />
                   </Button>
                 </div>
 
-                <div className="p-6 sm:p-8 space-y-6 bg-background">
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground border-b border-border pb-6">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      {new Date(selectedArticle.published_at).toLocaleString()}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Newspaper className="h-4 w-4" />
-                      {selectedArticle.source}
-                    </div>
-                    {selectedArticle.reliability && (
-                      <Badge variant="outline" className="ml-auto">
-                        Trust Score: {Math.round(selectedArticle.reliability * 100)}%
+                <div className="px-6 pb-6 -mt-12 relative">
+                  {/* A. HEADER SECTION */}
+                  {/* A. HEADER SECTION */}
+                  <div className="bg-card border border-border/50 shadow-sm rounded-xl p-5 mb-6">
+                    {/* Unified Metadata Line */}
+                    <div className="flex flex-wrap items-center gap-3 text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-4">
+                      <Badge variant="outline" className={
+                        selectedArticle.category === 'price' ? 'text-red-600 border-red-200 bg-red-50' :
+                          selectedArticle.category === 'supply' ? 'text-green-600 border-green-200 bg-green-50' :
+                            'text-blue-600 border-blue-200 bg-blue-50'
+                      }>
+                        {selectedArticle.category || 'General'}
                       </Badge>
-                    )}
+                      <span>{new Date(selectedArticle.published_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+
+                      <div className="h-4 w-px bg-border/60 mx-1" />
+
+                      {/* Trust & Consensus Group */}
+                      {selectedArticle.reliability && (
+                        <span className={`flex items-center gap-1.5 ${selectedArticle.reliability > 0.85 ? 'text-green-600' : 'text-amber-600'}`}>
+                          {selectedArticle.reliability > 0.85 ? <div className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" /> : null}
+                          {(selectedArticle.reliability * 100).toFixed(0)}% Trust
+                        </span>
+                      )}
+
+                      {(selectedArticle.related_links?.length > 1 || selectedArticle.source_count > 1) && (
+                        <>
+                          <span className="text-border/40">•</span>
+                          <span className="flex items-center gap-1 text-primary">
+                            {/* Simple Dots for Consensus */}
+                            <div className="flex gap-0.5">
+                              {[1, 2, 3].map(i => (
+                                <div key={i} className={`h-1 w-1 rounded-full ${(selectedArticle.source_count || selectedArticle.related_links?.length) >= (i * 2)
+                                    ? 'bg-primary' : 'bg-primary/20'
+                                  }`} />
+                              ))}
+                            </div>
+                            High Consensus
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <h2 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight">
+                      {selectedArticle.title}
+                    </h2>
                   </div>
 
-                  {/* AI Analysis Box */}
-                  <div className="bg-primary/5 border border-primary/10 rounded-xl p-6">
-                    <h3 className="flex items-center gap-2 font-semibold text-primary mb-3">
-                      <TrendingUp className="h-5 w-5" />
-                      Strategic Implication (AI Summary)
-                    </h3>
-                    <p className="text-foreground/90 leading-relaxed font-medium">
-                      {selectedArticle.ai_implication || selectedArticle.summary || "This development is being monitored for potential impact on the global cashew supply chain."}
-                    </p>
+                  {/* B. ONE SUMMARY BLOCK */}
+                  <div className="space-y-4 mb-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-bold uppercase text-primary">Key Takeaway</span>
+                    </div>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <p className="text-base text-foreground/90 leading-relaxed font-medium">
+                        {selectedArticle.ai_implication || selectedArticle.summary}
+                      </p>
+                      {/* Fallback to content if summary is empty */}
+                      {!selectedArticle.ai_implication && !selectedArticle.summary && (
+                        <div dangerouslySetInnerHTML={{ __html: selectedArticle.content }} className="line-clamp-4" />
+                      )}
+                    </div>
                   </div>
 
-                  {/* Full Article Section */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">Full Article</h3>
-                    <div
-                      className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground leading-loose"
-                      dangerouslySetInnerHTML={{ __html: selectedArticle.content || `<p>${selectedArticle.summary}</p>` }}
-                    />
-                  </div>
-
-                  {selectedArticle.url && (
-                    <div className="pt-4">
-                      <Button variant="outline" className="gap-2" asChild>
-                        <a href={selectedArticle.url} target="_blank" rel="noopener noreferrer">
-                          Verify Original Source <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </Button>
+                  {/* C. HASHTAGS */}
+                  {selectedArticle.tags && (
+                    <div className="flex flex-wrap gap-2 mb-8">
+                      {selectedArticle.tags.slice(0, 3).map((tag, i) => (
+                        <span key={i} className="text-xs font-medium text-muted-foreground bg-secondary px-2 py-1 rounded-md">
+                          #{tag.replace(/\s+/g, '')}
+                        </span>
+                      ))}
+                      {selectedArticle.tags.length > 3 && (
+                        <span className="text-xs text-muted-foreground px-1 py-1">
+                          +{selectedArticle.tags.length - 3} more
+                        </span>
+                      )}
                     </div>
                   )}
+
+                  {/* ACTIONS & SOURCES */}
+                  <div className="border-t border-border pt-6 space-y-4">
+                    {/* Primary CTA */}
+                    {selectedArticle.url && (
+                      <Button className="w-full h-12 text-base font-semibold shadow-sm" asChild>
+                        <a href={selectedArticle.url} target="_blank" rel="noopener noreferrer">
+                          Read on {selectedArticle.primary_source || selectedArticle.source} <ExternalLink className="ml-2 h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+
+                    {/* Secondary Sources (Collapsible) */}
+                    {selectedArticle.related_links && selectedArticle.related_links.length > 0 && (
+                      <details className="group text-sm text-muted-foreground">
+                        <summary className="cursor-pointer hover:text-foreground flex items-center gap-2 select-none list-none">
+                          <span className="font-medium">Also covered by {selectedArticle.related_links.length} other sources</span>
+                          <ChevronDown className="h-3 w-3 group-open:rotate-180 transition-transform" />
+                        </summary>
+                        <div className="mt-3 pl-0 space-y-2 flex flex-col border-l-2 border-border/50 ml-1 pl-3">
+                          {selectedArticle.related_links.map((link, idx) => (
+                            link.url !== selectedArticle.url && (
+                              <a
+                                key={idx}
+                                href={link.url}
+                                target="_blank"
+                                className="block text-primary hover:underline underline-offset-4 truncate"
+                              >
+                                {link.source}: {link.url}
+                              </a>
+                            )
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
                 </div>
-              </>
+              </div>
             )}
           </DialogContent>
         </Dialog>

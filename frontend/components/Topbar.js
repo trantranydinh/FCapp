@@ -1,5 +1,6 @@
 import { Search, Bell, User, Settings, Command } from "lucide-react";
 import { Button } from "./ui/button";
+import NotificationCenter from "./NotificationCenter";
 import { Badge } from "./ui/badge";
 
 export default function Topbar() {
@@ -28,10 +29,7 @@ export default function Topbar() {
                     <span className="text-[10px] font-medium text-emerald-600">System Optimal</span>
                 </div>
 
-                <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-accent/10">
-                    <Bell className="h-5 w-5 text-muted-foreground" />
-                    <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-500 border-2 border-background" />
-                </Button>
+                <NotificationCenter />
 
                 <Button variant="ghost" size="icon" className="rounded-full hover:bg-accent/10">
                     <Settings className="h-5 w-5 text-muted-foreground" />

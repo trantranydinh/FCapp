@@ -175,15 +175,20 @@ Provide a 2-3 sentence explanation that non-technical stakeholders can understan
    * Enhance news with LLM analysis
    */
   async enhanceNews(newsItem) {
-    const prompt = `You are a market analyst. Analyze this news headline and provide a brief 1-sentence market implication.
+    const prompt = `You are a cashew market analyst. Analyze this news item and provide a "Key Takeaway" consisting of exactly 3 sentences:
+
+1. A factual summary of the event (include specific numbers/locations if available).
+2. The strategic implication for price monitoring or decision-making.
+3. A confidence assessment based on the clarity of the report.
 
 Headline: ${newsItem.title}
-Summary: ${newsItem.summary || 'No summary available'}
+Source: ${newsItem.source}
+Context: ${newsItem.content ? newsItem.content.substring(0, 300) : newsItem.summary}
 
-What does this mean for cashew prices in the short term?`;
+Output only the 3 sentences. Do not use bullet points.`;
 
-    const implication = await this.call(prompt, { maxTokens: 100, temperature: 0.7 });
-    return implication || 'Market impact uncertain, monitor for further developments.';
+    const implication = await this.call(prompt, { maxTokens: 200, temperature: 0.5 });
+    return implication || null; // Use null to allow fallback to crawler simulation
   }
 
   /**
