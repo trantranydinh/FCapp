@@ -18,7 +18,7 @@ import { Button } from "./ui/button";
 
 const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/price-forecast", label: "Price Forecast", icon: TrendingUp },
+    { href: "/price-forecast", label: "Model Forecast", icon: TrendingUp },
     { href: "/market-insights", label: "Market Insights", icon: BarChart3 },
     { href: "/news-watch", label: "News Watch", icon: Newspaper },
     { href: "/lstm-demo", label: "LSTM Demo", icon: Activity },

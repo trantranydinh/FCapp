@@ -4,6 +4,33 @@ All notable changes to this project are documented here.
 
 ---
 
+## [v1.2.1] - 2026-01-20
+
+### 🔄 Data Infrastructure Upgrade (Lakehouse)
+
+#### 1. **SQL Analytics Endpoint Connection**
+- **File**: `backend/src/infrastructure/data/LakehouseProvider.js`
+- **What**: Chuyển đổi từ `ADLS Gen2 API` (đọc file) sang **`MSSQL/TDS`** (đọc Table).
+- **Why**: 
+  - Kết nối trực chuẩn vào **SQL Analytics Endpoint** của Fabric.
+  - Cho phép truy vấn SQL (`SELECT ...`) trực tiếp thay vì tải nguyên file Excel.
+  - Tối ưu hóa hiệu năng và bảo mật (dùng Service Principal).
+
+#### 2. **Forecast Data Strategy**
+- **File**: `backend/src/application/PriceOrchestrator.js`
+- **What**: Thêm logic ưu tiên lấy dữ liệu dự báo đã train sẵn.
+- **Priority Logic**:
+  1. Nếu cấu hình `LAKEHOUSE_FORECAST_TABLE`: Lấy dữ liệu dự báo trực tiếp từ Lakehouse Table -> **Visualize ngay**.
+  2. Nếu không có hoặc lỗi: Fallback về chạy mô hình Python (LSTM) cục bộ.
+- **Benefits**: Loại bỏ thời gian chờ train mô hình nếu kết quả đã có sẵn trên Lakehouse.
+
+#### 3. **Configuration Updates**
+- Cập nhật `.env`:
+  - Thêm `LAKEHOUSE_FORECAST_TABLE` để chỉ định bảng dự báo.
+  - Sử dụng App Registration (Service Principal) cho kết nối ngầm.
+
+---
+
 ## [v0.3.0] - 2025-11-20
 
 ### 🎉 Major Features Added

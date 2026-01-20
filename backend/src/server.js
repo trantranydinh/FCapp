@@ -10,6 +10,10 @@
  * - Graceful shutdown handling
  */
 
+import dns from 'dns';
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';

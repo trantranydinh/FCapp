@@ -25,7 +25,7 @@ const PriceForecastPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [dataSource, setDataSource] = useState('upload'); // 'upload' | 'lakehouse'
-  const { data: history } = useHistoricalData(12);
+  const { data: history, mutate: refreshHistory } = useHistoricalData(0); // Show ALL data by default
 
   const syncLakehouse = async () => {
     try {
@@ -33,10 +33,11 @@ const PriceForecastPage = () => {
 
       // 1. Sync Data from Lakehouse
       const syncResponse = await api.post("/api/v1/price/sync-lakehouse", {}, { timeout: 120000 });
+      const data = syncResponse.data;
 
       // Handle Device Code Auth Request
-      if (syncResponse && syncResponse.isAuthRequired) {
-        const { userCode, verificationUri } = syncResponse;
+      if (data && data.isAuthRequired) {
+        const { userCode, verificationUri } = data;
         // Show interactive prompt
         const shouldOpen = window.confirm(
           `Authentication Required (Microsoft Device Login)\n\n` +
@@ -52,19 +53,20 @@ const PriceForecastPage = () => {
         return;
       }
 
-      if (syncResponse && syncResponse.success) {
+      if (data && data.success) {
         // 2. Automatically Run Forecast on the new data
-        // Default to 30 days or user selection
         const days = selectedDays || 30;
         const forecastResponse = await api.post("/api/v1/price/run-forecast", { forecast_days: days });
 
         // 3. Trigger Visual Success Workflow
-        // This will animate steps 2 -> 5 and then show the results
-        handleUploadSuccess({ data: { forecast: forecastResponse.data } });
+        handleUploadSuccess({ data: { forecast: forecastResponse.data.data } });
+
+        // 4. Refresh historical background data
+        refreshHistory();
 
         // Optional: Browser notification
         if (typeof window !== 'undefined') {
-          window.alert(`Successfully synced ${syncResponse.data?.totalRows || ''} rows from Fabric Lakehouse.\nForecast updated.`);
+          window.alert(`Successfully synced ${data.data?.totalRows || ''} rows from Fabric Lakehouse.\nForecast updated.`);
         }
       }
     } catch (error) {
@@ -106,7 +108,9 @@ const PriceForecastPage = () => {
       setLoading(true);
       setSelectedDays(days);
       const response = await api.post("/api/v1/price/run-forecast", { forecast_days: days });
-      setForecast(response.data);
+      if (response.data && response.data.success) {
+        setForecast(response.data.data);
+      }
     } catch (error) {
       console.error(handleError(error));
     } finally {

@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "../lib/utils";
 import Link from "next/link";
- 
+
 export default function NewsWidget({ news = [], onRefresh, isRefreshing = false }) {
     // Fallback data if no news provided
     const displayNews = news.length > 0 ? news : [
@@ -14,7 +14,7 @@ export default function NewsWidget({ news = [], onRefresh, isRefreshing = false 
         { id: 3, title: "New Processing Tech Boosts Yields", source: "TechFarming", time: "6h ago", tag: "Technology" },
         { id: 4, title: "Weather Patterns Affect African Crop", source: "ClimateWatch", time: "12h ago", tag: "Weather" },
     ];
- 
+
     return (
         <Card className="glass-card border-none h-full flex flex-col">
             <CardHeader className="pb-2">
@@ -52,7 +52,11 @@ export default function NewsWidget({ news = [], onRefresh, isRefreshing = false 
                                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">{item.tag || item.tags?.[0] || "General"}</Badge>
                                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                                             <Clock className="h-3 w-3" />
-                                            {item.time || (item.published_at ? new Date(item.published_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now")}
+                                            {item.published_at ? (() => {
+                                                const diff = new Date() - new Date(item.published_at);
+                                                const hours = Math.floor(diff / (1000 * 60 * 60));
+                                                return hours < 24 ? `${hours}h ago` : new Date(item.published_at).toLocaleDateString();
+                                            })() : "Just now"}
                                         </div>
                                     </div>
                                     <Link href="/news-watch" className="text-sm font-medium leading-snug group-hover:text-primary transition-colors cursor-pointer block hover:underline">
@@ -77,4 +81,3 @@ export default function NewsWidget({ news = [], onRefresh, isRefreshing = false 
         </Card>
     );
 }
- 

@@ -12,6 +12,7 @@
 
 import jsonCache from '../infrastructure/data/JSONCache.js';
 import llmProvider from '../infrastructure/llm/LLMProvider.js';
+import marketOrchestrator from './MarketOrchestrator.js';
 
 class DashboardOrchestrator {
   /**
@@ -31,16 +32,19 @@ class DashboardOrchestrator {
         latestForecast,
         apiUsage,
         jobRuns,
+        marketInsights,
       ] = await Promise.allSettled([
         this._getLatestForecast(),
         this._getApiUsage(),
         this._getJobRuns(),
+        marketOrchestrator.getMarketInsights()
       ]);
 
       // Extract data with safe fallbacks
       const forecast = this._extractValue(latestForecast, null);
       const usage = this._extractValue(apiUsage, []);
       const runs = this._extractValue(jobRuns, []);
+      const insights = this._extractValue(marketInsights, null);
 
       // Build key metrics from forecast
       const keyMetrics = this._buildKeyMetrics(forecast);
@@ -52,6 +56,7 @@ class DashboardOrchestrator {
         key_metrics: keyMetrics,
         api_usage_summary: this._summarizeUsage(usage),
         recent_jobs: runs.slice(-5),
+        market_insights: insights,
         status: 'healthy'
       };
 
@@ -68,27 +73,27 @@ class DashboardOrchestrator {
    * @returns {Promise<object>} Historical summary
    */
   async getHistoricalSummary(monthsBack = 12) {
-    if (!Number.isInteger(monthsBack) || monthsBack < 1 || monthsBack > 24) {
-      throw new Error('monthsBack must be an integer between 1 and 24');
-    }
-
-    console.log(`[DashboardOrchestrator] Fetching historical data for ${monthsBack} months`);
+    console.log(`[DashboardOrchestrator] Fetching historical data for ${monthsBack === 0 ? 'ALL' : monthsBack + ' months'}`);
 
     try {
       const forecasts = await jsonCache.listForecasts();
 
-      // Filter forecasts by date
-      const cutoffDate = this._getMonthsAgo(monthsBack);
-      const filtered = forecasts.filter(f =>
-        new Date(f.createdAt || f.timestamp) >= cutoffDate
-      );
+      // Filter forecasts by date unless monthsBack is 0
+      const filtered = monthsBack === 0
+        ? forecasts
+        : forecasts.filter(f => {
+          const cutoffDate = this._getMonthsAgo(monthsBack);
+          return new Date(f.createdAt || f.timestamp) >= cutoffDate;
+        });
 
       return {
         forecasts: filtered,
         count: filtered.length,
         period_months: monthsBack,
         date_range: {
-          start: cutoffDate.toISOString(),
+          start: monthsBack === 0
+            ? (filtered[0]?.createdAt || filtered[0]?.timestamp || new Date(0).toISOString())
+            : this._getMonthsAgo(monthsBack).toISOString(),
           end: new Date().toISOString()
         }
       };

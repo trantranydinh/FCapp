@@ -15,4 +15,4 @@ export const useMarketSentiment = () => useSWR("/api/v1/dashboard/market-sentime
 export const useNewsSummary = (limit = 5) =>
   useSWR(`/api/v1/dashboard/news-summary?limit=${limit}`, fetcher);
 export const useHistoricalData = (monthsBack = 12) =>
-  useSWR(`/api/v1/dashboard/historical-data?months_back=${monthsBack}`, fetcher);
+  useSWR(`/api/v1/price/historical-data?months_back=${monthsBack}`, fetcher);

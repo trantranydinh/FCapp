@@ -14,6 +14,7 @@
 import { v4 as uuid } from 'uuid';
 import { addDays, subMonths, formatISO } from 'date-fns';
 
+import lakehouseProvider from '../infrastructure/data/LakehouseProvider.js';
 import excelReader from '../infrastructure/data/ExcelReader.js';
 import jsonCache from '../infrastructure/data/JSONCache.js';
 import llmProvider from '../infrastructure/llm/LLMProvider.js';
@@ -70,10 +71,34 @@ class PriceOrchestrator {
     const startTime = Date.now();
 
     try {
-      // Step 1: Read historical data
-      const historicalData = dataFilePath
-        ? excelReader.readPriceHistory(dataFilePath)
-        : excelReader.readDefaultPriceHistory('data', 'raw_2025.xlsx');
+      // Step 1: Read historical data (RAW)
+      let historicalData = [];
+
+      // A. Try Data File Path (User Upload)
+      if (dataFilePath) {
+        historicalData = excelReader.readPriceHistory(dataFilePath);
+      }
+      // B. Try Lakehouse (Preferred Production Source)
+      else if (lakehouseProvider.isConfigured()) {
+        try {
+          console.log('[PriceOrchestrator] Attempting to fetch RAw data from Lakehouse...');
+          // Fetch RAW table
+          const lakeData = await lakehouseProvider.fetchHistoricalPrices(5000);
+          if (lakeData && lakeData.length > 0) {
+            historicalData = lakeData;
+            console.log(`[PriceOrchestrator] Successfully loaded ${lakeData.length} records from Lakehouse.`);
+          } else {
+            console.warn('[PriceOrchestrator] Lakehouse returned no data. Falling back to local Excel.');
+          }
+        } catch (lakeError) {
+          console.warn(`[PriceOrchestrator] Lakehouse fetch failed: ${lakeError.message}. Falling back to local Excel.`);
+        }
+      }
+
+      // C. Fallback: Local Default Excel
+      if (historicalData.length === 0) {
+        historicalData = excelReader.readDefaultPriceHistory('data', 'raw_2025.xlsx');
+      }
 
       const stats = excelReader.getSummaryStats(historicalData);
       console.log(`[PriceOrchestrator] Loaded ${stats.count} historical price points`);
@@ -89,7 +114,34 @@ class PriceOrchestrator {
       console.log(`[PriceOrchestrator] Using model: ${modelMetadata.name} (${modelMetadata.version})`);
 
       // Step 3: Run prediction
-      const rawForecast = await model.predict(historicalData, forecastDays);
+      // MODIFIED: If Lakehouse is active and a Forecast Table is defined, try fetching pre-calculated forecast first
+      let rawForecast = null;
+      const forecastTableName = process.env.LAKEHOUSE_FORECAST_TABLE; // e.g. dbo.ICC_FORECAST
+
+      if (lakehouseProvider.isConfigured() && forecastTableName) {
+        try {
+          console.log(`[PriceOrchestrator] Attempting to fetch PRE-CALCULATED forecast from table: ${forecastTableName}`);
+          const forecastData = await lakehouseProvider.fetchHistoricalPrices(forecastDays, forecastTableName);
+
+          if (forecastData && forecastData.length > 0) {
+            console.log(`[PriceOrchestrator] Loaded ${forecastData.length} forecast points from Lakehouse.`);
+            // Transform to forecast structure
+            rawForecast = {
+              dates: forecastData.map(d => formatISO(d.date, { representation: 'date' })),
+              prices: forecastData.map(d => d.price),
+              confidenceScore: 0.95, // Mock confidence for pre-calc
+              metadata: { source: 'Lakehouse Pre-calculated' }
+            };
+          }
+        } catch (err) {
+          console.warn(`[PriceOrchestrator] Failed to fetch pre-calculated forecast: ${err.message}. Falling back to live model.`);
+        }
+      }
+
+      // If no pre-calc data, run live model
+      if (!rawForecast) {
+        rawForecast = await model.predict(historicalData, forecastDays);
+      }
 
       // Step 4: Enrich forecast with metadata
       const enrichedForecast = this._enrichForecast(rawForecast, {
@@ -220,17 +272,23 @@ class PriceOrchestrator {
    * @returns {Promise<object>} Historical price data
    */
   async getHistoricalPrices(monthsBack = 12) {
-    if (!Number.isInteger(monthsBack) || monthsBack < 1 || monthsBack > 24) {
-      throw new Error('monthsBack must be an integer between 1 and 24');
-    }
-
-    console.log(`[PriceOrchestrator] Fetching historical prices (${monthsBack} months)`);
+    console.log(`[PriceOrchestrator] Fetching historical prices (${monthsBack === 0 ? 'ALL' : monthsBack + ' months'})`);
 
     try {
-      const allData = excelReader.readDefaultPriceHistory('data', 'raw_2025.xlsx');
-      const cutoffDate = subMonths(new Date(), monthsBack);
+      let allData = [];
+      if (lakehouseProvider.isConfigured()) {
+        try {
+          allData = await lakehouseProvider.fetchHistoricalPrices(10000); // Increased limit for "all data"
+        } catch (e) { console.warn('Lakehouse fetch failed in getHistoricalPrices, falling back to Excel'); }
+      }
+      if (!allData || allData.length === 0) {
+        allData = excelReader.readDefaultPriceHistory('data', 'raw_2025.xlsx');
+      }
 
-      const filtered = allData.filter(item => item.date >= cutoffDate);
+      // Filter by date unless monthsBack is 0 (meaning "all history")
+      const filtered = monthsBack === 0
+        ? allData
+        : allData.filter(item => item.date >= subMonths(new Date(), monthsBack));
 
       if (filtered.length === 0) {
         throw new Error(`No historical data found for the last ${monthsBack} months`);
@@ -256,7 +314,7 @@ class PriceOrchestrator {
 
     } catch (error) {
       console.error('[PriceOrchestrator] Failed to fetch historical prices:', error.message);
-      throw new Error(`Failed to fetch historical prices: ${error.message}`);
+      throw new Error(`Failed to fetch historical prices: ${error.message} `);
     }
   }
 
@@ -285,7 +343,7 @@ class PriceOrchestrator {
 
     } catch (error) {
       console.error('[PriceOrchestrator] Failed to calculate accuracy:', error.message);
-      throw new Error(`Failed to calculate accuracy: ${error.message}`);
+      throw new Error(`Failed to calculate accuracy: ${error.message} `);
     }
   }
 
@@ -344,6 +402,7 @@ class PriceOrchestrator {
 
       if (explanation) {
         forecast.ai_explanation = explanation;
+        forecast.summary = explanation; // Map to summary for frontend display
       }
 
     } catch (error) {
