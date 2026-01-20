@@ -100,7 +100,7 @@ const NewsWatchPage = () => {
               {/* Limit Toggles */}
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-muted-foreground mr-2">Show:</span>
-                {[6, 9, 12].map((value) => (
+                {[6, 12, 24, 100].map((value) => (
                   <button
                     key={value}
                     onClick={() => setLimit(value)}
@@ -109,7 +109,7 @@ const NewsWatchPage = () => {
                       : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                       }`}
                   >
-                    {value}
+                    {value === 100 ? 'All' : value}
                   </button>
                 ))}
               </div>
@@ -141,42 +141,87 @@ const NewsWatchPage = () => {
                 return (
                   <article
                     key={index}
-                    className="group flex flex-col space-y-4 cursor-pointer"
+                    className="group flex flex-col space-y-3 cursor-pointer h-full"
                     onClick={() => setSelectedArticle({ ...item, _resolvedImage: imageUrl })}
                   >
                     {/* Image Card */}
-                    <div className="relative overflow-hidden rounded-2xl aspect-[4/3] bg-secondary border border-border/50">
+                    <div className="relative overflow-hidden rounded-2xl aspect-[16/9] bg-secondary border border-border/50">
                       <img
                         src={imageUrl}
                         alt={item.title}
                         className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
                         onError={(e) => { e.target.src = getPlaceholderImage(index + 1); }}
                       />
-                      <div className="absolute top-4 left-4">
-                        <Badge className="bg-white/90 text-foreground hover:bg-white border-0 shadow-sm backdrop-blur-sm">
-                          {item.category || item.source || 'News'}
+                      <div className="absolute top-3 left-3 flex gap-2">
+                        <Badge className={`${item.category === 'Price' ? 'bg-red-500 hover:bg-red-600' :
+                            item.category === 'Supply' ? 'bg-green-500 hover:bg-green-600' :
+                              item.category === 'Logistics' ? 'bg-blue-500 hover:bg-blue-600' :
+                                'bg-zinc-800 hover:bg-zinc-700'
+                          } text-white border-0 shadow-sm backdrop-blur-sm`}>
+                          {item.category || 'News'}
                         </Badge>
                       </div>
+
+                      {/* Trust Badge on Image */}
+                      {item.reliability && (
+                        <div className="absolute bottom-3 right-3">
+                          <Badge variant="secondary" className="bg-black/60 text-white backdrop-blur-md border-0 text-[10px] gap-1">
+                            {item.reliability > 0.85 ? <div className="h-1.5 w-1.5 rounded-full bg-green-400" /> : <div className="h-1.5 w-1.5 rounded-full bg-amber-400" />}
+                            {(item.reliability * 100).toFixed(0)}% Trust
+                          </Badge>
+                        </div>
+                      )}
                     </div>
 
                     {/* Content */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        <span>{new Date(item.published_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                        <span className="w-1 h-1 rounded-full bg-border" />
-                        <span className="text-primary">{item.source}</span>
+                    <div className="flex flex-col flex-1 space-y-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-primary">{item.source}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(item.published_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+
+                        {/* Consensus Dots Small */}
+                        {(item.related_links?.length > 0 || item.source_count > 1) && (
+                          <div className="flex gap-0.5" title="Consensus">
+                            {[1, 2, 3].map(i => (
+                              <div key={i} className={`h-1 w-1 rounded-full ${(item.source_count || item.related_links?.length || 1) >= i
+                                ? 'bg-primary' : 'bg-primary/20'}`} />
+                            ))}
+                          </div>
+                        )}
                       </div>
 
-                      <h2 className="text-xl font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+                      <h2 className="text-lg font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
                         {item.title}
                       </h2>
 
-                      <p className="text-muted-foreground line-clamp-3 leading-relaxed text-sm">
+                      <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">
                         {item.summary || item.content?.substring(0, 150) + "..."}
                       </p>
 
-                      <div className="pt-2 flex items-center gap-2 text-sm font-semibold text-foreground group-hover:underline decoration-primary decoration-2 underline-offset-4">
-                        Read Analysis <TrendingUp className="h-4 w-4" />
+                      <div className="pt-2 mt-auto flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-foreground group-hover:underline decoration-primary decoration-2 underline-offset-4">
+                          Read Analysis <TrendingUp className="h-3 w-3" />
+                        </div>
+
+                        {/* Direct Link Icon */}
+                        {item.url && (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded-full hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={(e) => e.stopPropagation()} // Prevent modal opening
+                            title="Open original source"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
                       </div>
                     </div>
                   </article>
@@ -248,7 +293,7 @@ const NewsWatchPage = () => {
                             <div className="flex gap-0.5">
                               {[1, 2, 3].map(i => (
                                 <div key={i} className={`h-1 w-1 rounded-full ${(selectedArticle.source_count || selectedArticle.related_links?.length) >= (i * 2)
-                                    ? 'bg-primary' : 'bg-primary/20'
+                                  ? 'bg-primary' : 'bg-primary/20'
                                   }`} />
                               ))}
                             </div>

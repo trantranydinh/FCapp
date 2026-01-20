@@ -133,43 +133,71 @@ class NewsOrchestrator {
    * @private
    */
   _getFallbackNews() {
-    const now = new Date().toISOString();
+    const now = new Date();
+    const twoHoursAgo = new Date(now - 2 * 60 * 60 * 1000).toISOString();
+    const fourHoursAgo = new Date(now - 4 * 60 * 60 * 1000).toISOString();
+    const yesterday = new Date(now - 24 * 60 * 60 * 1000).toISOString();
 
     return [
       {
-        title: 'Export demand for cashew remains steady in Q1',
-        source: 'Cashew Market Watch',
-        summary: 'Key buyers in Europe maintain forward contracts, supporting price stability.',
-        impact: 'MEDIUM',
-        published_at: now,
-        url: 'https://www.reuters.com/markets/commodities', // General commodities page
-        image_url: 'https://images.unsplash.com/photo-1611974765270-ca12586343bb?w=800&q=80',
-        tags: ['Demand', 'Europe'],
-        content: `<p><strong>(Reuters)</strong> - Demand for cashew kernels in the European market has shown resilience despite broader economic headwinds. Importers report a steady increase in orders for premium grades (W320 and above) as consumer preference shifts towards healthier snacking options.</p><p>However, inflationary pressures are squeezing margins for smaller distributors. "The appetite is there, but price sensitivity is at an all-time high," says a procurement manager at a leading German retailer.</p><p>Market participants expect this trend of high volume but lower margin to continue through Q3 2024.</p>`
+        id: 'demo-1',
+        title: 'Vietnam Cashew Exports Hit Record High in Q4 2024',
+        source: 'Vinacas Official',
+        domain: 'vinacas.com.vn',
+        summary: 'Vietnam\'s cashew exports have surged 15% year-on-year, driven by strong demand from the US and EU markets during the holiday season. The association notes stable raw nut supply has been crucial.',
+        ai_implication: '1. Production volumes in Vietnam are outpacing forecasts, suggesting eased supply constraints. 2. Traders should watch for potential oversupply softening prices in Q1 2025. 3. Strong EU demand indicates robust consumption despite economic headwinds.',
+        category: 'Supply',
+        published_at: twoHoursAgo,
+        url: 'https://vinacas.com.vn/news-demo',
+        image_url: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&q=80',
+        tags: ['Vietnam', 'Exports', 'Production'],
+        reliability: 0.95,
+        is_trusted: true,
+        source_count: 5,
+        related_links: [
+          { source: 'Reuters', url: 'https://reuters.com/demo1', domain: 'reuters.com' },
+          { source: 'Vietnam Briefing', url: 'https://vietnam-briefing.com/demo', domain: 'vietnam-briefing.com' },
+          { source: 'AgriLinks', url: 'https://agrilinks.org/demo', domain: 'agrilinks.org' }
+        ]
       },
       {
-        title: 'Logistics costs tick higher amid shipping constraints',
+        id: 'demo-2',
+        title: 'Global Freight Rates Spike on Asia-Europe Routes',
         source: 'Logistics Daily',
-        summary: 'Freight rates rise 4-6% on select routes, prompting early booking strategies.',
-        impact: 'HIGH',
-        reliability: 0.6,
-        published_at: now,
-        url: 'https://www.logisticsmgmt.com/topic/ocean_freight',
-        image_url: 'https://images.unsplash.com/photo-1494412574643-35d32468817e?w=800&q=80',
-        tags: ['Logistics'],
-        content: `<p><strong>(Logistics Daily)</strong> - Global shipping routes are facing renewed strain as container availability tightens in key Asian ports. Freight rates for the Vietnam-Europe route have ticked up by 4-6% in the last week alone.</p><p>Exporters are advised to book shipments at least 3 weeks in advance to secure slots. "Space is the new currency," notes a freight forwarder based in Ho Chi Minh City.</p><p>This uptick in logistics costs is likely to be passed on to the CFR prices in the coming weeks.</p>`
+        domain: 'logisticsdaily.com',
+        summary: 'Container shipping rates have increased by 12% this week due to renewed congestion in key transit hubs. Exporters are facing delays of up to 2 weeks for bookings.',
+        ai_implication: '1. Logistics costs will directly impact CFR prices for upcoming shipments. 2. Buyers should account for longer lead times (additional 14 days). 3. Immediate booking is recommended to secure current rates before further hikes.',
+        category: 'Logistics',
+        published_at: fourHoursAgo,
+        url: 'https://logisticsdaily.com/demo',
+        image_url: 'https://images.unsplash.com/photo-1566385101042-1a0aa0c1268c?w=800&q=80',
+        tags: ['Shipping', 'Freight', 'Cost'],
+        reliability: 0.88,
+        is_trusted: true,
+        source_count: 3,
+        related_links: [
+          { source: 'Bloomberg', url: 'https://bloomberg.com/demo', domain: 'bloomberg.com' },
+          { source: 'Maersk News', url: 'https://maersk.com/news', domain: 'maersk.com' }
+        ]
       },
       {
-        title: 'New processing facilities announced in Vietnam',
-        source: 'Industry News',
-        summary: 'Three new cashew processing plants will increase regional capacity by 15%.',
-        impact: 'MEDIUM',
-        reliability: 0.8,
-        published_at: now,
-        url: 'https://www.vietnam-briefing.com/news/category/industry/agriculture',
-        image_url: 'https://images.unsplash.com/photo-1598514981750-f19a0a39525c?w=800&q=80',
-        tags: ['Supply', 'Vietnam'],
-        content: `<p><strong>(Industry News)</strong> - In a bid to consolidate its position as the world's leading cashew processor, Vietnam has announced the groundbreaking of three new large-scale processing facilities in Binh Phuoc province.</p><p>These facilities, expected to come online by late 2025, will add approximately 15% to the regional processing capacity. The focus is on automation and high-value retrieval rates.</p><p>The move is seen as a direct response to increasing competition from African processing hubs.</p>`
+        id: 'demo-3',
+        title: 'Ivory Coast Sets New Farmgate Price for 2025 Season',
+        source: 'Abidjan Business',
+        domain: 'abidjan.net',
+        summary: 'The CCA (Cotton and Cashew Council) has established a minimum farmgate price of 320 FCFA/kg for the upcoming season, aiming to ensure fair compensation for farmers amid inflation.',
+        ai_implication: '1. The new floor price establishes a higher cost basis for RCN sourcing. 2. Processors in Vietnam/India will face tighter margins if kernel prices do not rise proportionally. 3. Monitor enforcement levels in the bush, as actual trading often varies.',
+        category: 'Price',
+        published_at: yesterday,
+        url: 'https://abidjan.net/demo',
+        image_url: 'https://images.unsplash.com/photo-1611974765270-ca12586343bb?w=800&q=80',
+        tags: ['Ivory Coast', 'RCN', 'Regulation'],
+        reliability: 0.92,
+        is_trusted: true,
+        source_count: 2,
+        related_links: [
+          { source: 'CommodityHQ', url: 'https://commodityhq.com/demo', domain: 'commodityhq.com' }
+        ]
       }
     ];
   }

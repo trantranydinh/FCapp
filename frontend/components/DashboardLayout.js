@@ -21,6 +21,7 @@ import {
   Settings,
   Bell,
   Database,
+  RefreshCw,
   ShieldCheck
 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -124,8 +125,11 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
             <div key={idx} className="space-y-1">
               {/* Section Header */}
               {!isCollapsed && (
-                <h3 className="px-3 text-[10px] uppercase tracking-wider font-bold text-muted-foreground/70 mb-2 select-none">
+                <h3 className="px-3 text-[10px] uppercase tracking-wider font-bold text-muted-foreground/70 mb-2 select-none flex items-center justify-between">
                   {section.title}
+                  {(section.title === "App Settings" || section.title === "Price Forecast") && (
+                    <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded ml-2 normal-case">Coming Soon</span>
+                  )}
                 </h3>
               )}
 
@@ -241,13 +245,11 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
               size="sm"
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm border border-transparent active:scale-95 transition-transform"
               onClick={() => {
-                // Demo: Dynamic Favicon Sequence
-                setFavicon('loading');
-                setTimeout(() => setFavicon('badge', 3), 2000);
+                window.location.reload();
               }}
             >
-              <Activity className="w-4 h-4 mr-2" />
-              Run Forecast
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh Data
             </Button>
 
             <div className="h-6 w-[1px] bg-border" />

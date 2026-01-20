@@ -43,8 +43,8 @@ router.get('/overview', async (_req, res, next) => {
 router.get('/historical-data', async (req, res, next) => {
   try {
     const monthsBack = parseInt(req.query.months_back || '12', 10);
-    if (isNaN(monthsBack) || monthsBack < 1 || monthsBack > 24) {
-      return res.status(400).json({ success: false, error: 'Invalid months_back. Must be between 1 and 24' });
+    if (isNaN(monthsBack) || (monthsBack !== 0 && (monthsBack < 1 || monthsBack > 60))) {
+      return res.status(400).json({ success: false, error: 'Invalid months_back. Must be 0 (all) or between 1 and 60' });
     }
     console.log(`[Dashboard API] GET /historical-data (months: ${monthsBack})`);
     const data = await dashboardOrchestrator.getHistoricalSummary(monthsBack);
@@ -101,7 +101,7 @@ router.post('/news-refresh', async (req, res, next) => {
 router.get('/market-sentiment', async (_req, res, next) => {
   try {
     console.log('[Dashboard API] GET /market-sentiment');
-    const sentiment = await marketOrchestrator.getMarketSentiment();
+    const sentiment = await marketOrchestrator.getMarketInsights();
     res.json({ success: true, data: sentiment });
   } catch (error) {
     console.error('[Dashboard API] Market sentiment failed:', error.message);

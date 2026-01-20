@@ -299,10 +299,10 @@ router.get('/historical-data', async (req, res, next) => {
     const monthsBack = parseInt(req.query.months_back || '12', 10);
 
     // Validate months back
-    if (isNaN(monthsBack) || monthsBack < 1 || monthsBack > 24) {
+    if (isNaN(monthsBack) || (monthsBack !== 0 && (monthsBack < 1 || monthsBack > 60))) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid months_back. Must be between 1 and 24'
+        error: 'Invalid months_back. Must be 0 (all) or between 1 and 60'
       });
     }
 
