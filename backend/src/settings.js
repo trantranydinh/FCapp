@@ -27,7 +27,7 @@ loadEnvironment();
 export { loadEnvironment };
 
 export const settings = {
-  port: Number(process.env.BACKEND_PORT || 8000),
+  port: Number(process.env.PORT || 50005),
   appName: process.env.APP_NAME || "Cashew Forecast System",
   appVersion: process.env.APP_VERSION || "0.2.0-node",
   demoMode: process.env.APP_MODE !== "production",

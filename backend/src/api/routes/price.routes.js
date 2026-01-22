@@ -13,131 +13,28 @@
  */
 
 import { Router } from 'express';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs-extra';
 import priceOrchestrator from '../../application/PriceOrchestrator.js';
-import { settings } from '../../settings.js';
 
 const router = Router();
 
-// ========== FILE UPLOAD CONFIGURATION ==========
-
-const storage = multer.diskStorage({
-  destination: async (_req, _file, cb) => {
-    const uploadDir = path.resolve(settings.dataDir);
-    await fs.ensureDir(uploadDir);
-    cb(null, uploadDir);
-  },
-  filename: (_req, file, cb) => {
-    // Save with timestamp to avoid overwriting
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    const baseName = path.basename(file.originalname, ext);
-    cb(null, `${baseName}_${timestamp}${ext}`);
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB max
-  },
-  fileFilter: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-
-    if (ext !== '.xlsx' && ext !== '.xls') {
-      cb(new Error('Only Excel files (.xlsx, .xls) are allowed'));
-      return;
-    }
-
-    cb(null, true);
-  }
-});
-
 // ========== ROUTE HANDLERS ==========
 
-/**
- * POST /api/v1/price/upload-and-forecast
- * Upload Excel file and run forecast
- *
- * Body (multipart/form-data):
- * - file: Excel file
- * - forecast_days: Number of days to forecast (optional, default: 60)
- * - model_id: Model to use (optional, default: lstm-v1)
- *
- * Response: Forecast result
- */
-router.post('/upload-and-forecast', upload.single('file'), async (req, res, next) => {
-  try {
-    // Validate file upload
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'No file uploaded. Please upload an Excel file.'
-      });
-    }
-
-    const forecastDays = parseInt(req.body.forecast_days || '60', 10);
-    const modelId = req.body.model_id || null;
-
-    // Validate forecast days
-    if (isNaN(forecastDays) || forecastDays < 1 || forecastDays > 90) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid forecast_days. Must be between 1 and 90'
-      });
-    }
-
-    console.log(`[Price API] POST /upload-and-forecast (file: ${req.file.filename}, days: ${forecastDays})`);
-
-    // Run forecast with uploaded file
-    const forecast = await priceOrchestrator.runForecast(
-      forecastDays,
-      modelId,
-      req.file.path
-    );
-
-    res.json({
-      success: true,
-      message: 'File uploaded and forecast generated successfully',
-      data: {
-        filename: req.file.filename,
-        forecast
-      }
-    });
-
-  } catch (error) {
-    console.error('[Price API] Upload and forecast failed:', error.message);
-    next(error);
-  }
-});
-
-/**
- * POST /api/v1/price/run-forecast
- * Run forecast with default data
- *
- * Body:
- * - forecast_days: Number of days to forecast (optional, default: 60)
- * - model_id: Model to use (optional, default: lstm-v1)
- *
- * Response: Forecast result
- */
-router.post('/run-forecast', async (req, res, next) => {
+const fetchForecastHandler = async (req, res, next) => {
   try {
     const forecastDays = parseInt(req.body.forecast_days || '60', 10);
     const modelId = req.body.model_id || null;
 
     // Validate forecast days
-    if (isNaN(forecastDays) || forecastDays < 1 || forecastDays > 90) {
+    if (isNaN(forecastDays) || forecastDays < 1 || forecastDays > 180) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid forecast_days. Must be between 1 and 90'
+        error: 'Invalid forecast_days. Must be between 1 and 180'
       });
     }
 
-    console.log(`[Price API] POST /run-forecast (days: ${forecastDays}, model: ${modelId || 'default'})`);
+    console.log(`[Price API] POST ${req.path} (days: ${forecastDays})`);
 
+    // runForecast now automatically prioritizes Lakehouse ("FC" table)
     const forecast = await priceOrchestrator.runForecast(forecastDays, modelId);
 
     res.json({
@@ -146,10 +43,24 @@ router.post('/run-forecast', async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('[Price API] Forecast failed:', error.message);
+    console.error('[Price API] Fetch forecast failed:', error.message);
     next(error);
   }
-});
+};
+
+/**
+ * POST /api/v1/price/fetch-forecast
+ * Fetch forecast results from Lakehouse
+ */
+router.post('/fetch-forecast', fetchForecastHandler);
+
+/**
+ * POST /api/v1/price/run-forecast
+ * Alias for fetch-forecast for backward compatibility with frontend
+ */
+router.post('/run-forecast', fetchForecastHandler);
+
+
 
 /**
  * GET /api/v1/price/models
@@ -359,20 +270,11 @@ router.get('/health', (_req, res) => {
   });
 });
 
-// ========== ERROR HANDLER FOR MULTER ==========
-
+// ========== ERROR HANDLER ==========
+// Standard error handling is sufficient for now
 router.use((error, req, res, next) => {
-  if (error instanceof multer.MulterError) {
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({
-        success: false,
-        error: 'File too large. Maximum size is 10MB'
-      });
-    }
-    return res.status(400).json({
-      success: false,
-      error: `File upload error: ${error.message}`
-    });
+  if (error.status) {
+    return res.status(error.status).json({ success: false, error: error.message });
   }
   next(error);
 });
@@ -385,22 +287,27 @@ import lakehouseProvider from '../../infrastructure/data/LakehouseProvider.js';
  */
 router.post('/sync-lakehouse', async (req, res, next) => {
   try {
-    console.log('[Price API] POST /sync-lakehouse');
-    // const userId = req.user?.id || 'demo_user';
-    const userId = 'demo_user'; // Simplified for now
+    console.log('[Price API] POST /sync-lakehouse (Direct Table Mode)');
 
-    const result = await lakehouseProvider.fetchAndSaveToLocal(userId, 1000, res);
+    // Check if configured
+    if (!lakehouseProvider.isConfigured()) {
+      return res.status(400).json({ success: false, error: 'Lakehouse not configured.' });
+    }
 
-    // If result is null, it means auth response was sent or handled internally
-    if (!result) return;
+    // Just verify connection by fetching 1 row from 'raw' table
+    try {
+      const checkData = await lakehouseProvider.fetchHistoricalPrices(1, 'raw');
+      res.json({
+        success: true,
+        message: 'Lakehouse connection verified (Direct Mode)',
+        data: { totalRows: checkData.length > 0 ? '>0' : '0' }
+      });
+    } catch (err) {
+      // If it's an auth error that requires interaction, we might need to handle it. 
+      // But assuming Service Principal is used as per latest changelog.
+      throw err;
+    }
 
-    // We can optionally trigger the forecast run immediately here, 
-    // but better to let the frontend decide (return file details)
-    res.json({
-      success: true,
-      message: 'Lakehouse data synced successfully',
-      data: result
-    });
   } catch (error) {
     console.error('[Price API] Lakehouse sync failed:', error.message);
     next(error);

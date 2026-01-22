@@ -113,7 +113,7 @@ export default function Login() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => window.location.href = 'http://localhost:8000/api/v1/auth/azure/login'}
+              onClick={() => window.location.href = '/api/v1/auth/azure/login'}
               className="w-full gap-2 border-input hover:bg-accent"
             >
               <svg className="w-5 h-5" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">

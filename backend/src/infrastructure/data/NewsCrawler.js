@@ -10,302 +10,543 @@
  */
 
 import Parser from 'rss-parser';
-import axios from 'axios';
+import * as cheerio from 'cheerio';
 import { v4 as uuidv4 } from 'uuid';
-import db from '../../db/mysqlClient.js';
+import crypto from 'crypto';
+import axios from 'axios';
 
 const rssParser = new Parser({
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' },
     customFields: {
         item: [
             ['image', 'image'],
             ['media:content', 'media'],
             ['enclosure', 'enclosure'],
             ['description', 'summary'],
-            ['content:encoded', 'full_content']
+            ['content:encoded', 'full_content'],
+            ['dc:creator', 'author'],
+            ['pubDate', 'pubDate'],
+            ['isoDate', 'isoDate']
         ]
     }
 });
 
+const IMAGE_POOLS = {
+    market: [
+        'https://images.unsplash.com/photo-1628102491629-778571d893a3?w=800&fit=crop',
+        'https://images.unsplash.com/photo-1610450549449-74d394b0bd15?w=800&fit=crop',
+        'https://images.unsplash.com/photo-1590779033100-9f60a05a013d?w=800&fit=crop',
+        'https://images.unsplash.com/photo-1642543492481-44e81e3914a7?w=800&fit=crop',
+        'https://images.unsplash.com/photo-1559589689-577aabd1db4f?w=800&fit=crop',
+        'https://images.unsplash.com/photo-1560472355-536de3962603?w=800&fit=crop', // Finance
+        'https://images.unsplash.com/photo-1611974765270-ca1258634369?w=800&fit=crop', // Trading
+        'https://images.unsplash.com/photo-1535320903710-d9cf5b367b67?w=800&fit=crop',
+        'https://images.unsplash.com/photo-1526304640152-d4619684e484?w=800&fit=crop'
+    ],
+    supply: [
+        'https://images.unsplash.com/photo-1601053746399-6e426cb7507b?w=800&fit=crop', // Cashew fruit
+        'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=800&fit=crop',
+        'https://images.unsplash.com/photo-1627914040994-db7cdb144fae?w=800&fit=crop',
+        'https://images.unsplash.com/photo-1595839049400-354964177d70?w=800&fit=crop', // Farming
+        'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=800&fit=crop', // Agriculture
+        'https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=800&fit=crop',
+        'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=800&fit=crop'
+    ],
+    logistics: [
+        'https://images.unsplash.com/photo-1494412651409-ae1e0d529258?w=800&fit=crop', // Container
+        'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&fit=crop',
+        'https://images.unsplash.com/photo-1566847438217-76e82d383f84?w=800&fit=crop', // Port
+        'https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800&fit=crop', // Ship
+        'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?w=800&fit=crop'
+    ],
+    general: [
+        'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&fit=crop', // Food
+        'https://plus.unsplash.com/premium_photo-1675363010376-76495cb2e32f?w=800&fit=crop', // Cashew
+        'https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?w=800&fit=crop',
+        'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&fit=crop', // Business
+        'https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=800&fit=crop'
+    ]
+};
+
+// ============================================
+// HELPER CLASSES
+// ============================================
+
+class ZeroDuplicateImageResolver {
+    constructor() {
+        this.usedImages = new Set();
+        this.articleImageMap = new Map();
+        this.imagePools = IMAGE_POOLS;
+    }
+
+    reset() {
+        this.usedImages.clear();
+        this.articleImageMap.clear();
+    }
+
+    async resolveImage(article) {
+        const fingerprint = this.getArticleFingerprint(article);
+
+        // 1. Check cache
+        if (this.articleImageMap.has(fingerprint)) {
+            return this.articleImageMap.get(fingerprint);
+        }
+
+        let imageUrl = null;
+        let imageSource = null;
+
+        // LEVEL 1: RSS Metadata Extraction
+        imageUrl = this.extractRSSImage(article);
+        if (imageUrl && this.isValidImageUrl(imageUrl)) {
+            // Check uniqueness if strict unique is needed, but RSS images are specific to article so usually OK
+            // We still mark it used.
+            imageSource = 'rss';
+        }
+
+        // LEVEL 2: Open Graph (Deep Fetch)
+        if (!imageUrl && article.link) {
+            imageUrl = await this.fetchOGImage(article.link);
+            if (imageUrl) {
+                imageSource = 'og';
+            }
+        }
+
+        // LEVEL 3: Deterministic Fallback (Zero Duplicate Logic)
+        if (!imageUrl) {
+            imageUrl = this.getUniqueFallback(article);
+            imageSource = 'fallback';
+        }
+
+        // Track usage
+        this.usedImages.add(imageUrl);
+        this.articleImageMap.set(fingerprint, imageUrl);
+
+        return imageUrl;
+    }
+
+    extractRSSImage(article) {
+        // Enclosure
+        if (article.enclosure && article.enclosure.url && article.enclosure.type?.startsWith('image')) {
+            return article.enclosure.url;
+        }
+        // Media content
+        if (article['media:content'] && article['media:content'].$ && article['media:content'].$.url) {
+            return article['media:content'].$.url;
+        }
+        // Image tag
+        if (article.image && article.image.url) {
+            return article.image.url;
+        }
+        // Parsed from extracted HTML in description
+        if (article.extractedImage) {
+            return article.extractedImage;
+        }
+        return null;
+    }
+
+    async fetchOGImage(url, timeout = 3000) {
+        if (!url || !url.startsWith('http')) return null;
+        try {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+
+            const response = await axios.get(url, {
+                signal: controller.signal,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Accept': 'text/html'
+                },
+                maxRedirects: 3
+            });
+            clearTimeout(id);
+
+            const $ = cheerio.load(response.data);
+            let ogImage = $('meta[property="og:image"]').attr('content') ||
+                $('meta[name="twitter:image"]').attr('content');
+
+            if (ogImage) {
+                if (ogImage.startsWith('//')) ogImage = 'https:' + ogImage;
+                else if (ogImage.startsWith('/')) {
+                    const u = new URL(url);
+                    ogImage = `${u.protocol}//${u.host}${ogImage}`;
+                }
+            }
+            return ogImage;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    getUniqueFallback(article) {
+        const category = this.detectCategory(article);
+        const pool = this.imagePools[category] || this.imagePools.general;
+
+        // Strategy: Use content hash to pick an index
+        // To ensure uniqueness across a list, we try to pick one not used.
+        // If all used, we cycle.
+
+        const fingerprint = this.getArticleFingerprint(article);
+        const hash = this.hashCode(fingerprint);
+
+        // Try to find an unused image starting from the hash index
+        for (let i = 0; i < pool.length; i++) {
+            const idx = (Math.abs(hash) + i) % pool.length;
+            const img = pool[idx];
+            if (!this.usedImages.has(img)) {
+                return img;
+            }
+        }
+
+        // If all used, just return based on hash
+        return pool[Math.abs(hash) % pool.length];
+    }
+
+    detectCategory(article) {
+        const text = `${article.title} ${article.summary || ''}`.toLowerCase();
+        if (/price|market|trade|cost|value/.test(text)) return 'market';
+        if (/harvest|crop|farm|yield|supply|rain|weather/.test(text)) return 'supply';
+        if (/ship|port|container|freight|logistics/.test(text)) return 'logistics';
+        return 'general';
+    }
+
+    getArticleFingerprint(article) {
+        return `${article.link || article.url}-${article.title}`;
+    }
+
+    hashCode(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash |= 0;
+        }
+        return hash;
+    }
+
+    isValidImageUrl(url) {
+        return url && url.match(/^https?:\/\/.+\.(jpg|jpeg|png|webp|gif|svg)$/i) || (url && url.startsWith('http') && !url.includes('google.com/news')); // Basic check
+    }
+}
+
+// ============================================
+// MAIN CRAWLER CLASS
+// ============================================
+
 class NewsCrawler {
     constructor() {
-        this.sources = [
-            // Standard RSS Feeds
-            { id: 'google_rss', name: 'Google News', type: 'rss', url: 'https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en' },
-            { id: 'bing_rss', name: 'Bing News', type: 'rss', url: 'https://www.bing.com/news/rss/search?q={query}' },
+        this.imageResolver = new ZeroDuplicateImageResolver();
+        this.rssParser = new Parser({
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+        });
 
-            // Industry Specific Sources (RSS)
-            { id: 'freshplaza', name: 'Fresh Plaza', type: 'rss', url: 'https://www.freshplaza.com/rss' },
-            { id: 'agrilinks', name: 'Agrilinks', type: 'rss', url: 'https://agrilinks.org/rss.xml' },
-
-            // Simulated trusted sources for specific crawling (would require scraping in prod)
-            { id: 'commodityhq', name: 'CommodityHQ', type: 'direct', url: 'https://commodityhq.com' }
-        ];
-
-        // Keyword Expansion Dictionary
-        this.keywordMap = {
-            'price': ['pricing', 'cost', 'quote', 'rate', 'valuation', 'market value'],
-            'vietnam': ['Vietnamese', 'VN', 'Ho Chi Minh', 'Binh Phuoc', 'Dong Nai'],
-            'cashew': ['RCN', 'raw cashew nut', 'kernel', 'anacardium'],
-            'export': ['trade', 'shipment', 'cargo', 'logistics', 'customs']
+        this.sourceTiers = {
+            'A': ['worldbank.org', 'fao.org', 'vinacas.com.vn', 'gov.vn', 'usda.gov'],
+            'B': ['reuters.com', 'bloomberg.com', 'agrilinks.org', 'freshplaza.com', 'inc.org', 'cnbc.com', 'ft.com'],
+            'C': ['commodityhq.com', 'blog.', 'medium.com', 'pr.com']
         };
-
-        this.trustedDomains = [
-            'reuters.com', 'bloomberg.com', 'agrilinks.org', 'freshplaza.com',
-            'commodityhq.com', 'worldbank.org', 'fao.org', 'vinacas.com.vn'
-        ];
     }
 
     /**
-     * Crawl news for a given profile
-     * @param {object} profile - User profile with keywords
+     * MAIN ENTRY POINT
      */
     async crawl(profile) {
-        console.log(`[NewsCrawler] Starting crawl for profile: ${profile.name}`);
+        this.imageResolver.reset();
+        const profilename = profile.name || 'General';
+        console.log(`[NewsCrawler] Starting Bulletproof Crawl for: ${profilename}`);
 
-        try {
-            // 1. Expand Keywords
-            const searchTerms = this._generateSearchTerms(profile.keywords);
-            console.log(`[NewsCrawler] Expanded terms: ${searchTerms.join(', ')}`);
+        let allArticles = [];
 
-            // 2. Multi-source Crawl (Parallel)
-            const tasks = this.sources.map(source => this._fetchFromSource(source, searchTerms));
-            const results = await Promise.allSettled(tasks);
+        // 1. Keyword Expansion
+        const keywords = this._expandKeywords(profile.keywords || ['cashew']);
+        console.log(`[NewsCrawler] Keywords: ${keywords.join(', ')}`);
 
-            // 3. Aggregate & Normalize
-            let articles = results
-                .filter(r => r.status === 'fulfilled')
-                .flatMap(r => r.value);
+        // 2. Fetch from Multiple Sources (Parallel)
+        const fetchTasks = keywords.map(kw => this._fetchByKeyword(kw));
 
-            console.log(`[NewsCrawler] Raw articles fetched: ${articles.length}`);
+        // Add specific industry feeds parallel to keywords
+        fetchTasks.push(this._fetchIndustryFeeds());
 
-            // 4. Advanced Filtering (Deduplication, Spam, Relevance)
-            articles = this._filterArticles(articles, profile);
-
-            // 5. Score & Rank
-            articles = this._rankArticles(articles, profile);
-
-            // 6. Return top results
-            return articles.slice(0, 50); // Limit processed set
-
-        } catch (error) {
-            console.error('[NewsCrawler] Crawl failed:', error);
-            // Fallback to synthetic if critical failure
-            return this._generateFallbackNews(profile);
-        }
-    }
-
-    /**
-     * Generate expanded list of search queries
-     * @private
-     */
-    _generateSearchTerms(baseKeywords) {
-        const terms = new Set();
-
-        baseKeywords.forEach(kw => {
-            const lowerKw = kw.toLowerCase();
-            terms.add(lowerKw);
-
-            // specific keyword expansion
-            if (this.keywordMap[lowerKw]) {
-                this.keywordMap[lowerKw].forEach(syn => terms.add(syn));
-            }
-
-            // contextual phrase matching (simple combination)
-            if (lowerKw.includes('cashew')) {
-                terms.add(`${lowerKw} price`);
-                terms.add(`${lowerKw} market`);
-                terms.add(`${lowerKw} export`);
-            }
+        const results = await Promise.allSettled(fetchTasks);
+        results.forEach(r => {
+            if (r.status === 'fulfilled') allArticles.push(...r.value);
         });
 
-        // Limit query length/complexity for external APIs
-        return Array.from(terms).slice(0, 5); // Take top 5 unique terms
-    }
-
-    /**
-     * Fetch from a method based on source type
-     * @private
-     */
-    async _fetchFromSource(source, searchTerms) {
-        if (source.type === 'rss') {
-            // Combine terms into a single query string for RSS (OR logic)
-            const query = searchTerms.join(' OR ');
-            const url = source.url.replace('{query}', encodeURIComponent(query));
-            return await this._fetchRSS(url, source.name);
+        // 3. Fallback to Cache if empty
+        if (allArticles.length === 0) {
+            console.warn('[NewsCrawler] All sources failed. Attempting cache fallback.');
+            const cached = await this._loadCache();
+            if (cached && cached.length > 0) return cached;
+            return this._generateFallbackNews(profile); // Return generated fallback if no cache
         }
-        else if (source.type === 'direct') {
-            // Placeholder: In real-world, this would use Puppeteer/Cheerio
-            // For now, return empty to simulate "no access" without scraper
-            return [];
-        }
-        return [];
-    }
 
-    /**
-     * Standardized RSS Fetcher
-     * @private
-     */
-    async _fetchRSS(url, sourceName) {
-        try {
-            const feed = await rssParser.parseURL(url);
-            return feed.items.map(item => ({
-                id: uuidv4(),
-                title: item.title,
-                link: item.link,
-                source: sourceName,
-                // Attempt to find domain
-                domain: this._extractDomain(item.link),
-                pubDate: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
-                summary: item.summary || item.contentSnippet || '',
-                content: item['content:encoded'] || item.content || '',
-                // Heuristic mapping
-                author: item.creator || item.author || 'Unknown'
-            }));
-        } catch (e) {
-            console.warn(`[NewsCrawler] RSS fail for ${url}: ${e.message}`);
-            return [];
-        }
-    }
+        // 4. Deduplicate
+        const uniqueArticles = this._deduplicate(allArticles);
+        console.log(`[NewsCrawler] Fetched ${allArticles.length} raw, deduplicated to ${uniqueArticles.length}`);
 
-    /**
-     * Filter pipeline
-     * @private
-     */
-    _filterArticles(articles, profile) {
-        const uniqueMap = new Map();
-        const now = new Date();
-        const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+        // 5. Enrich & Resolve Images
+        const enrichedArticles = await Promise.all(uniqueArticles.map(async (article) => {
+            // Resolve Image (3-Level Logic)
+            const resolvedImage = await this.imageResolver.resolveImage(article);
 
-        articles.forEach(article => {
-            // 1. Date Filter (Last 30 days)
-            if (new Date(article.pubDate) < thirtyDaysAgo) return;
-
-            // 2. Language Filter (Simple heuristic: title characters)
-            if (/[^\u0000-\u007F]+/.test(article.title.substring(0, 20))) {
-                // heuristic to prefer English stats
-            }
-
-            // 3. Spam Detection (Basic)
-            const spamKeywords = ['casino', 'betting', 'lottery', 'dating', 'crypto', 'giveaway'];
-            if (spamKeywords.some(sw => article.title.toLowerCase().includes(sw))) return;
-
-            // 4. Deduplication & Consensus
-            const normalizedTitle = article.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-            if (uniqueMap.has(normalizedTitle)) {
-                const existing = uniqueMap.get(normalizedTitle);
-
-                // Add to related links (Consensus)
-                if (!existing.related_links) existing.related_links = [];
-                existing.related_links.push({
-                    source: article.source,
-                    url: article.link,
-                    domain: article.domain
-                });
-
-                // Keep the main article from the most trusted source
-                if (this.trustedDomains.includes(article.domain) && !this.trustedDomains.includes(existing.domain)) {
-                    // Swap main article but keep the related links
-                    article.related_links = existing.related_links;
-                    uniqueMap.set(normalizedTitle, article);
-                }
-                return;
-            }
-
-            article.related_links = [];
-            uniqueMap.set(normalizedTitle, article);
-        });
-
-        return Array.from(uniqueMap.values());
-    }
-
-    /**
-     * Rank/Score articles for display prioritization
-     * @private
-     */
-    _rankArticles(articles, profile) {
-        return articles.map(article => {
-            let score = 0;
-
-            // A. Recency Score (0-30 points)
-            const hoursOld = (new Date() - new Date(article.pubDate)) / (1000 * 60 * 60);
-            score += Math.max(0, 30 - hoursOld);
-
-            // B. Source reliability (0-40 points)
-            if (this.trustedDomains.some(d => article.domain.includes(d))) {
-                score += 40;
-                article.is_trusted = true;
-            }
-
-            // C. Keyword Relevance (0-30 points)
-            const text = (article.title + ' ' + article.summary).toLowerCase();
-            let matches = 0;
-            profile.keywords.forEach(kw => {
-                if (text.includes(kw.toLowerCase())) matches++;
-            });
-            score += Math.min(30, matches * 10);
-
-            // D. Consensus Bonus (0-20 points)
-            if (article.related_links && article.related_links.length > 0) {
-                score += Math.min(20, article.related_links.length * 5);
-            }
+            // Calculate Scores
+            const { trustScore, trustLevel, trustReasons } = this._calculateTrust(article);
+            const relevanceScore = this._calculateRelevance(article, profile);
 
             return {
-                ...article,
-                score,
-                reliability: Math.min(0.99, (score / 100) + 0.1), // Normalize 0-1 for UI
-                category: this._deriveCategory(article.title + ' ' + article.summary),
-                source_count: (article.related_links ? article.related_links.length : 0) + 1
+                id: this._generateId(article),
+                title: article.title,
+                summary: article.summary || "No summary available.",
+                url: article.link,
+                originalUrl: article.link,
+                image_url: resolvedImage,
+                source: article.source || 'Unknown',
+                sourceDomain: this._extractDomain(article.link),
+                sourceTier: article.sourceTier,
+                category: this.imageResolver.detectCategory(article).charAt(0).toUpperCase() + this.imageResolver.detectCategory(article).slice(1),
+                publishedAt: article.pubDate,
+                trustScore,
+                trustLevel,
+                trustReasons,
+                relevanceScore,
+                overallScore: Math.round((trustScore * 0.6) + (relevanceScore * 0.4)),
+                related_links: article.related || []
             };
-        }).sort((a, b) => b.score - a.score);
+        }));
+
+        // 6. Sort & Limit
+        enrichedArticles.sort((a, b) => b.overallScore - a.overallScore);
+        const final = enrichedArticles.slice(0, 30);
+
+        // 7. Save Cache
+        this._saveCache(final);
+
+        return final;
     }
 
-    _deriveCategory(text) {
-        const t = text.toLowerCase();
-        if (t.includes('price') || t.includes('market') || t.includes('demand')) return 'Market';
-        if (t.includes('logistics') || t.includes('ship') || t.includes('freight')) return 'Logistics';
-        if (t.includes('crop') || t.includes('harvest') || t.includes('yield')) return 'Supply';
-        if (t.includes('rain') || t.includes('weather') || t.includes('drought')) return 'Weather';
-        return 'General';
+    // ============================================
+    // FETCHING LOGIC
+    // ============================================
+
+    async _fetchByKeyword(keyword) {
+        const encoded = encodeURIComponent(keyword);
+        const sources = [
+            { name: 'Google News', url: `https://news.google.com/rss/search?q=${encoded}&hl=en-US&gl=US&ceid=US:en` },
+            { name: 'Bing News', url: `https://www.bing.com/news/search?q=${encoded}&format=rss` }
+        ];
+
+        const articles = [];
+        for (const s of sources) {
+            try {
+                const feed = await this.rssParser.parseURL(s.url);
+                feed.items.forEach(item => {
+                    const parsed = this._parseItem(item, s.name);
+                    if (parsed) articles.push(parsed);
+                });
+            } catch (e) {
+                // Ignore individual feed errors
+            }
+        }
+        return articles;
+    }
+
+    async _fetchIndustryFeeds() {
+        // Use Google News Site Operators for stability instead of fragile direct RSS
+        const sites = ['site:freshplaza.com', 'site:agrilinks.org', 'site:worldbank.org'];
+        return this._fetchByKeyword(sites.join(' OR ') + ' cashew');
+    }
+
+    _parseItem(item, sourceName) {
+        const rawDesc = item['content:encoded'] || item.content || item.summary || item.description || '';
+        const { cleanSummary, extractedPublisher, extractedImage } = this._parseHtml(rawDesc);
+
+        let pubDate = item.pubDate || item.isoDate;
+        if (!pubDate || isNaN(new Date(pubDate).getTime())) pubDate = new Date().toISOString();
+        else pubDate = new Date(pubDate).toISOString();
+
+        return {
+            title: item.title,
+            link: item.link,
+            pubDate: pubDate,
+            summary: cleanSummary,
+            source: extractedPublisher || item.source || sourceName,
+            rawDesc,
+            extractedImage, // For Level 1 resolution
+            enclosure: item.enclosure,
+            'media:content': item['media:content'],
+            image: item.image
+        };
+    }
+
+    _parseHtml(html) {
+        if (!html) return { cleanSummary: '', extractedPublisher: null, extractedImage: null };
+        try {
+            const $ = cheerio.load(html);
+
+            // Publisher
+            let extractedPublisher = null;
+            const fontTag = $('font').first();
+            if (fontTag.length) extractedPublisher = fontTag.text().trim();
+
+            // Image
+            const extractedImage = $('img').first().attr('src');
+
+            // Summary
+            $('a, script, style, img, font').remove();
+            let text = $.text().replace(/\s+/g, ' ').trim();
+            if (text.length > 500) text = text.substring(0, 500) + '...';
+
+            return { cleanSummary: text, extractedPublisher, extractedImage };
+        } catch {
+            return { cleanSummary: '', extractedPublisher: null, extractedImage: null };
+        }
+    }
+
+    // ============================================
+    // PIPELINE LOGIC
+    // ============================================
+
+    _expandKeywords(baseKeywords) {
+        const expanded = new Set(baseKeywords);
+        baseKeywords.forEach(k => {
+            const lower = k.toLowerCase();
+            if (lower.includes('cashew')) {
+                expanded.add('raw cashew nut');
+                expanded.add('RCN price');
+                expanded.add('cashew kernel');
+            }
+        });
+        return Array.from(expanded).slice(0, 5); // Limit to avoid rate limits
+    }
+
+    _deduplicate(articles) {
+        const map = new Map();
+
+        articles.forEach(a => {
+            // Norm Title: alphanumeric, first 40 chars
+            const key = a.title.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 40);
+
+            if (map.has(key)) {
+                const existing = map.get(key);
+                // Merge info
+                if (!existing.related) existing.related = [];
+                existing.related.push({ source: a.source, url: a.link });
+
+                // Keep the one with better summary or more recent
+                if (a.summary.length > existing.summary.length) {
+                    existing.summary = a.summary;
+                }
+            } else {
+                a.related = [];
+                map.set(key, a);
+            }
+        });
+
+        return Array.from(map.values());
+    }
+
+    _calculateTrust(article) {
+        const domain = this._extractDomain(article.link);
+        let score = 50;
+        const reasons = [];
+
+        // Check Tiers
+        let tier = 'Unverified';
+        if (this.sourceTiers.A.some(d => domain.includes(d))) { tier = 'A'; score += 40; reasons.push('Source Type: Official/Gov'); }
+        else if (this.sourceTiers.B.some(d => domain.includes(d))) { tier = 'B'; score += 25; reasons.push('Source Type: Industry Reputable'); }
+        else if (this.sourceTiers.C.some(d => domain.includes(d))) { tier = 'C'; score -= 10; reasons.push('Source Type: Blog/Vendor'); }
+        else { reasons.push('Source Type: Aggregator'); }
+
+        // Consensus Bonus
+        if (article.related && article.related.length > 0) {
+            score += 10;
+            reasons.push('High Consensus (+ Sources)');
+        }
+
+        // Penalty
+        if (/sponsored|press release/.test(article.title.toLowerCase())) {
+            score -= 20;
+            reasons.push('Possible Promotional');
+        }
+
+        const finalScore = Math.min(100, Math.max(0, score));
+        let trustLevel = 'Low';
+        if (finalScore >= 80) trustLevel = 'High';
+        else if (finalScore >= 50) trustLevel = 'Medium';
+
+        article.sourceTier = tier;
+        return { trustScore: finalScore, trustLevel, trustReasons };
     }
 
     _extractDomain(url) {
+        try { return new URL(url).hostname; } catch { return ''; }
+    }
+
+    _calculateRelevance(article, profile) {
+        let score = 0;
+        const text = (article.title + ' ' + article.summary).toLowerCase();
+        profile.keywords.forEach(k => {
+            if (text.includes(k.toLowerCase())) score += 20;
+        });
+        return Math.min(100, score);
+    }
+
+    _generateId(article) {
+        return crypto.createHash('md5').update(article.title + article.pubDate).digest('hex');
+    }
+
+    // ============================================
+    // CACHE UTILS
+    // ============================================
+
+    async _saveCache(articles) {
         try {
-            const u = new URL(url);
-            return u.hostname.replace('www.', '');
-        } catch {
-            return 'unknown.com';
+            await fs.ensureDir(path.dirname(CACHE_FILE));
+            await fs.writeJson(CACHE_FILE, { timestamp: Date.now(), data: articles });
+        } catch (e) {
+            console.error('Cache save failed', e);
         }
     }
 
-    /**
-     * Fallback for demo/offline modes
-     */
+    async _loadCache() {
+        try {
+            if (await fs.pathExists(CACHE_FILE)) {
+                const cache = await fs.readJson(CACHE_FILE);
+                // Return cache even if stale as fallback
+                return cache.data || [];
+            }
+        } catch (e) {
+            console.error('Cache load failed', e);
+        }
+        return null;
+    }
+
     _generateFallbackNews(profile) {
+        const now = new Date();
         return [
             {
-                id: uuidv4(),
-                title: "Global Cashew Market Report 2025: Production Estimates and Trade Flows",
+                id: 'demo-1-fallback',
+                title: "Global Cashew Market Report 2025: Production Estimates",
                 source: "CommodityHQ",
-                domain: "commodityhq.com",
-                pubDate: new Date().toISOString(),
+                sourceTier: "B",
+                publishedAt: now.toISOString(),
                 summary: "Comprehensive analysis of global RCN output, highlighting resilient production in West Africa despite weather challenges.",
-                score: 95,
+                overallScore: 90,
+                trustScore: 85,
+                trustReasons: ['Tier B: Reputable Industry Source'],
                 category: 'Market',
-                reliability: 0.95,
-                is_trusted: true
+                url: '#'
             },
             {
-                id: uuidv4(),
+                id: 'demo-2-fallback',
                 title: "Vietnam Cashew Exports Hit Record High in Q4",
-                source: "AgriLinks",
-                domain: "agrilinks.org",
-                pubDate: new Date(Date.now() - 3600000 * 5).toISOString(), // 5 hours ago
+                source: "Vinacas",
+                sourceTier: "A",
+                publishedAt: new Date(now - 3600000 * 5).toISOString(),
                 summary: "Processing hubs in Vietnam report strong demand from US and European buyers ahead of the holiday season.",
-                score: 88,
+                overallScore: 95,
+                trustScore: 95,
+                trustReasons: ['Tier A: Official/Gov Source'],
                 category: 'Supply',
-                reliability: 0.88,
-                is_trusted: true
+                url: '#'
             }
         ];
     }

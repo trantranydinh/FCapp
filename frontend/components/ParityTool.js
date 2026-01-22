@@ -79,7 +79,16 @@ const ParityTool = () => {
                 import("../lib/apiClient").then(({ api }) => {
                     api.get('/api/v1/parity/history?limit=20')
                         .then(response => {
-                            setHistory(response.data.data);
+                            // Normalize data to support different SP formats
+                            const rawData = response.data.data || [];
+                            const normalizedData = rawData.map(item => ({
+                                ...item,
+                                timestamp: item.timestamp || item.calculatedAt || item.time || item.created_at || item.calculation_timestamp,
+                                rcn_cfr: item.rcn_cfr || item.rcnCfr || item.rcnPrice || item.rcncfr,
+                                quality_kor: item.quality_kor || item.qualityKor || item.kor || item.qualitykor,
+                                price_per_lbs: item.price_per_lbs || item.priceCkLb
+                            }));
+                            setHistory(normalizedData);
                             setShowHistory(true);
                         })
                         .catch(err => console.error("Failed to load history", err))
@@ -453,12 +462,12 @@ const ParityTool = () => {
                                             filteredHistory.map((item, index) => (
                                                 <tr key={index} className="border-b border-border/50 hover:bg-secondary/20">
                                                     <td className="px-4 py-3">
-                                                        {new Date(item.timestamp || item.calculation_time || item.created_at).toLocaleString()}
+                                                        {new Date(item.timestamp || item.calculatedAt || item.time || item.created_at || item.calculation_timestamp).toLocaleString()}
                                                     </td>
                                                     <td className="px-4 py-3 capitalize">{item.origin}</td>
-                                                    <td className="px-4 py-3">${item.rcn_cfr}</td>
-                                                    <td className="px-4 py-3">{item.quality_kor}</td>
-                                                    <td className="px-4 py-3 text-right font-medium text-primary">${Number(item.price_per_lbs).toFixed(2)}</td>
+                                                    <td className="px-4 py-3">${item.rcn_cfr || item.rcnCfr || item.rcnPrice || item.rcncfr}</td>
+                                                    <td className="px-4 py-3">{item.quality_kor || item.qualityKor || item.kor || item.qualitykor}</td>
+                                                    <td className="px-4 py-3 text-right font-medium text-primary">${Number(item.price_per_lbs || item.priceCkLb).toFixed(2)}</td>
                                                 </tr>
                                             ))
                                         ) : (

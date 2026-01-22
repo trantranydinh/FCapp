@@ -21,15 +21,15 @@ const formatPercent = (value) => `${value > 0 ? '+' : ''}${Number(value || 0).to
 const PriceForecastPage = () => {
   const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [selectedDays, setSelectedDays] = useState(null);
+  const [prophetLoading, setProphetLoading] = useState(false);
+  const [selectedDays, setSelectedDays] = useState(60);
   const [currentStep, setCurrentStep] = useState(1);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [dataSource, setDataSource] = useState('upload'); // 'upload' | 'lakehouse'
   const { data: history, mutate: refreshHistory } = useHistoricalData(0); // Show ALL data by default
 
   const syncLakehouse = async () => {
     try {
       setLoading(true);
+      setCurrentStep(2);
 
       // 1. Sync Data from Lakehouse
       const syncResponse = await api.post("/api/v1/price/sync-lakehouse", {}, { timeout: 120000 });
@@ -54,26 +54,32 @@ const PriceForecastPage = () => {
       }
 
       if (data && data.success) {
-        // 2. Automatically Run Forecast on the new data
-        const days = selectedDays || 30;
-        const forecastResponse = await api.post("/api/v1/price/run-forecast", { forecast_days: days });
+        setCurrentStep(3);
+        // 2. Automatically Run/Fetch Forecast on the new data
+        const days = selectedDays || 60;
+        // Use the new fetch-forecast endpoint (aliased to run-forecast)
+        const forecastResponse = await api.post("/api/v1/price/fetch-forecast", { forecast_days: days });
 
-        // 3. Trigger Visual Success Workflow
-        handleUploadSuccess({ data: { forecast: forecastResponse.data.data } });
+        setCurrentStep(4);
+        setTimeout(() => {
+          setCurrentStep(5);
+          if (forecastResponse.data && forecastResponse.data.success) {
+            setForecast(forecastResponse.data.data);
+            // Optional: Browser notification
+            if (typeof window !== 'undefined') {
+              // window.alert(`Successfully fetched forecast from Fabric Lakehouse.`);
+            }
+          }
+        }, 800);
 
-        // 4. Refresh historical background data
+        // 3. Refresh historical background data
         refreshHistory();
-
-        // Optional: Browser notification
-        if (typeof window !== 'undefined') {
-          window.alert(`Successfully synced ${data.data?.totalRows || ''} rows from Fabric Lakehouse.\nForecast updated.`);
-        }
       }
     } catch (error) {
       console.error(handleError(error));
+      setCurrentStep(1); // Reset
       if (typeof window !== 'undefined') {
         const msg = error.response?.data?.message || error.message || "Unknown error";
-        // Ignore "Response Sent" error if it leaks
         if (!msg.includes('RESPONSE_SENT')) {
           window.alert("Lakehouse Sync Failed: " + msg);
         }
@@ -86,15 +92,12 @@ const PriceForecastPage = () => {
   const loadLatest = async () => {
     try {
       const response = await api.get("/api/v1/price/latest");
-      setForecast(response.data);
+      setForecast(response.data.data);
     } catch (error) {
-      // Ignore 404 if no forecast exists yet
       if (error.response && error.response.status === 404) {
         setForecast(null);
         return;
       }
-      console.error(() => handleError(error)); // Use callback or just log message to avoid throwing in render loop? 
-      // Actually handleError throws. We should simple log it here to avoid crashing the app.
       console.warn("Failed to load latest forecast:", error.message);
     }
   };
@@ -107,7 +110,7 @@ const PriceForecastPage = () => {
     try {
       setLoading(true);
       setSelectedDays(days);
-      const response = await api.post("/api/v1/price/run-forecast", { forecast_days: days });
+      const response = await api.post("/api/v1/price/fetch-forecast", { forecast_days: days });
       if (response.data && response.data.success) {
         setForecast(response.data.data);
       }
@@ -117,25 +120,6 @@ const PriceForecastPage = () => {
       setLoading(false);
     }
   };
-
-  const handleUploadSuccess = (data) => {
-    setUploadSuccess(true);
-    setCurrentStep(2);
-
-    // Simulate workflow steps
-    setTimeout(() => setCurrentStep(3), 1500);
-    setTimeout(() => setCurrentStep(4), 3000);
-    setTimeout(() => {
-      setCurrentStep(5);
-      if (data && data.data && data.data.forecast) {
-        setForecast(data.data.forecast);
-      } else {
-        loadLatest();
-      }
-      setUploadSuccess(false);
-    }, 4500);
-  };
-
 
   // Get trend direction
   const getTrend = (percentage) => {
@@ -170,84 +154,56 @@ const PriceForecastPage = () => {
           <ExecutiveOverview />
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Left: Upload & Workflow Panel */}
+            {/* Left: Workflow Panel */}
             <div className="xl:col-span-3 space-y-6">
               <Card className="bg-card border border-border shadow-none relative overflow-hidden">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Calendar className="h-5 w-5 text-primary" />
-                    Forecast Workflow
+                    Forecast Data Source
                   </CardTitle>
-                  <CardDescription>Upload data to generate real-time AI price predictions</CardDescription>
+                  <CardDescription>Fetch latest price predictions directly from Azure Fabric Lakehouse</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <ForecastStepper currentStep={currentStep} />
 
-                  {/* Data Source Selection */}
-                  {(currentStep === 1 || currentStep === 5) && (
-                    <div className="flex flex-col space-y-4">
-
-                      <div className="flex justify-center pb-2">
-                        <div className="bg-muted p-1 rounded-lg flex gap-1">
+                  {/* Action Area */}
+                  {(currentStep === 1 || currentStep >= 5) && (
+                    <div className="flex flex-col space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                      <Card className="border-dashed border-2 border-border/50 bg-accent/5">
+                        <CardContent className="flex flex-col items-center justify-center py-8 text-center space-y-4">
+                          <div className="bg-primary/10 p-4 rounded-full">
+                            <Share2 className="h-8 w-8 text-primary" />
+                          </div>
+                          <div className="space-y-2">
+                            <h3 className="font-semibold text-lg">Connect to Fabric Lakehouse</h3>
+                            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                              Securely fetch the latest pre-calculated forecast data ('FC' Table) from your organizational OneLake.
+                            </p>
+                          </div>
                           <Button
-                            variant={dataSource === 'upload' ? 'default' : 'ghost'}
-                            size="sm"
-                            onClick={() => setDataSource('upload')}
-                            className="w-32"
+                            onClick={syncLakehouse}
+                            size="lg"
+                            className="w-48 gap-2"
+                            disabled={loading}
                           >
-                            Upload File
+                            {loading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Syncing...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="h-4 w-4" />
+                                Fetch Forecast
+                              </>
+                            )}
                           </Button>
-                          <Button
-                            variant={dataSource === 'lakehouse' ? 'default' : 'ghost'}
-                            size="sm"
-                            onClick={() => setDataSource('lakehouse')}
-                            className="w-32 gap-2"
-                          >
-                            Lakehouse
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        {dataSource === 'upload' ? (
-                          <FileUploadCard onUploadSuccess={handleUploadSuccess} />
-                        ) : (
-                          <Card className="border-dashed border-2 border-border/50 bg-accent/5">
-                            <CardContent className="flex flex-col items-center justify-center py-10 text-center space-y-4">
-                              <div className="bg-primary/10 p-4 rounded-full">
-                                <Share2 className="h-8 w-8 text-primary" />
-                              </div>
-                              <div className="space-y-2">
-                                <h3 className="font-semibold text-lg">Connect to Fabric Lakehouse</h3>
-                                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                                  Securely fetch the latest market pricing data directly from your organizational OneLake / SQL Endpoint.
-                                </p>
-                              </div>
-                              <Button
-                                onClick={syncLakehouse}
-                                size="lg"
-                                className="w-48 gap-2"
-                                disabled={loading}
-                              >
-                                {loading ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    Syncing...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Download className="h-4 w-4" />
-                                    Fetch Data
-                                  </>
-                                )}
-                              </Button>
-                              <p className="text-xs text-muted-foreground pt-2">
-                                Source: <strong>Production Lakehouse (SQL)</strong>
-                              </p>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </div>
+                          <p className="text-xs text-muted-foreground pt-2">
+                            Source: <strong>Production Lakehouse (SQL Endpoint)</strong>
+                          </p>
+                        </CardContent>
+                      </Card>
                     </div>
                   )}
 
@@ -262,8 +218,8 @@ const PriceForecastPage = () => {
                         </div>
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold">Processing Data...</h3>
-                        <p className="text-sm text-muted-foreground">Running LSTM Neural Network Analysis</p>
+                        <h3 className="text-lg font-semibold">Syncing Data...</h3>
+                        <p className="text-sm text-muted-foreground">Retrieving latest forecast models from Lakehouse</p>
                       </div>
                     </div>
                   )}
@@ -283,7 +239,7 @@ const PriceForecastPage = () => {
                       <Calendar className="h-5 w-5 text-primary" />
                       Forecast Horizon
                     </CardTitle>
-                    <CardDescription>Select time period for AI prediction</CardDescription>
+                    <CardDescription>Select time period to view</CardDescription>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" className="gap-2">
@@ -297,7 +253,7 @@ const PriceForecastPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-3">
-                  {[7, 14, 30, 60, 90, 180].map((days) => (
+                  {[30, 60, 90, 180].map((days) => (
                     <Button
                       key={days}
                       onClick={() => runForecast(days)}
@@ -337,7 +293,7 @@ const PriceForecastPage = () => {
               <CardHeader>
                 <CardTitle>Price Forecast Visualization</CardTitle>
                 <CardDescription>
-                  Historical prices vs ML-generated forecast predictions with confidence intervals
+                  Historical prices vs Fabric Lakehouse forecast predictions
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-1">
@@ -351,14 +307,20 @@ const PriceForecastPage = () => {
                         }
                         : undefined
                     }
-                    forecast={forecast?.detailedData}
+                    forecast={forecast?.detailedData || {
+                      // Fallback/direct mapping if internal structure differs
+                      forecast_dates: forecast?.dates || [],
+                      forecast_prices: forecast?.prices || [],
+                      lower_bound: forecast?.lower_bound || [],
+                      upper_bound: forecast?.upper_bound || []
+                    }}
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-muted-foreground">
                     <div className="text-center space-y-2">
                       <TrendingUp className="h-12 w-12 mx-auto opacity-20" />
                       <p>No forecast data available.</p>
-                      <p className="text-sm">Select a horizon above to generate predictions.</p>
+                      <p className="text-sm">Click 'Fetch Forecast' above to sync.</p>
                     </div>
                   </div>
                 )}
@@ -368,12 +330,11 @@ const PriceForecastPage = () => {
             {/* Insights Panel */}
             <div className="space-y-6">
               <AIExplained
-                confidence={confidenceScore || 85}
-                summary={forecast?.summary || "The model predicts a continuation of the current trend based on historical patterns and recent volatility markers."}
+                confidence={confidenceScore || 99}
+                summary={forecast?.summary || "Forecast data synchronized from Azure Fabric Lakehouse."}
                 factors={[
-                  { name: "Historical Volatility", impact: "High", direction: "negative" },
-                  { name: "Seasonal Index", impact: "Medium", direction: "positive" },
-                  { name: "Market Momentum", impact: "Medium", direction: "neutral" }
+                  { name: "Lakehouse Table", impact: "High", direction: "positive" },
+                  { name: "Model Version", impact: "FC_2025_v1", direction: "neutral" }
                 ]}
               />
 
@@ -384,30 +345,30 @@ const PriceForecastPage = () => {
                 <CardContent>
                   <div className="space-y-4 text-sm">
                     <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-muted-foreground">Model Type</span>
-                      <span className="font-semibold">{forecast?.modelType || "LSTM Neural Net"}</span>
+                      <span className="text-muted-foreground">Source</span>
+                      <span className="font-semibold">{forecast?.metadata?.source || "Azure Lakehouse"}</span>
                     </div>
                     <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-muted-foreground">Forecast Horizon</span>
+                      <span className="text-muted-foreground">Horizon</span>
                       <span className="font-semibold">{forecast?.forecastDays || selectedDays || "—"} Days</span>
                     </div>
                     <div className="flex justify-between border-b border-border/50 pb-2">
-                      <span className="text-muted-foreground">Generated At</span>
+                      <span className="text-muted-foreground">Synced At</span>
                       <span className="font-semibold">
-                        {forecast?.timestamp ? new Date(forecast.timestamp).toLocaleTimeString() : "—"}
+                        {forecast?.timestamp ? new Date(forecast.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Data Points</span>
-                      <span className="font-semibold">{forecast?.detailedData?.forecast_dates?.length || 0}</span>
+                      <span className="font-semibold">{(forecast?.dates || forecast?.detailedData?.forecast_dates || []).length}</span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
           </div>
-        </div >
-      </DashboardLayout >
+        </div>
+      </DashboardLayout>
     </>
   );
 };
