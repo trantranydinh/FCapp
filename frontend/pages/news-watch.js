@@ -8,6 +8,7 @@ import { Dialog, DialogContent } from "../components/ui/dialog";
 import { useNewsSummary } from "../hooks/useDashboardData";
 import { Newspaper, Tag, Calendar, TrendingUp, TrendingDown, ChevronDown, ChevronUp, X, ExternalLink, Search, Loader2 } from "lucide-react";
 import { useSWRConfig } from "swr"; // Import for global mutate
+import { cn } from "../lib/utils";
 
 const NewsWatchPage = () => {
   const [limit, setLimit] = useState(9); // Default to 9 for grid
@@ -133,95 +134,133 @@ const NewsWatchPage = () => {
               {newsItems.map((item, index) => {
                 // Fallback image logic
                 // Prioritize direct image, then Unsplash valid ID
-                let imageUrl = item.image_url;
-                if (!imageUrl || imageUrl.includes('source.unsplash.com')) {
-                  imageUrl = getPlaceholderImage(index);
-                }
-
                 return (
                   <article
-                    key={index}
-                    className="group flex flex-col space-y-3 cursor-pointer h-full"
-                    onClick={() => setSelectedArticle({ ...item, _resolvedImage: imageUrl })}
+                    key={item.id}
+                    className="flex flex-col bg-card border border-border/60 hover:border-primary/50 shadow-sm hover:shadow-md transition-all duration-300 rounded-xl overflow-hidden group h-full cursor-pointer"
+                    onClick={() => setSelectedArticle({ ...item, _resolvedImage: item.image_url || getPlaceholderImage(index) })}
                   >
-                    {/* Image Card */}
-                    <div className="relative overflow-hidden rounded-2xl aspect-[16/9] bg-secondary border border-border/50">
+                    {/* TOP: Image & Visuals */}
+                    <div className="relative h-48 w-full shrink-0 overflow-hidden bg-muted">
                       <img
-                        src={imageUrl}
+                        src={item.image_url || getPlaceholderImage(index)}
                         alt={item.title}
-                        className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-105"
-                        onError={(e) => { e.target.src = getPlaceholderImage(index + 1); }}
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        onError={(e) => { e.target.src = getPlaceholderImage(index); }}
                       />
-                      <div className="absolute top-3 left-3 flex gap-2">
-                        <Badge className={`${item.category === 'Price' ? 'bg-red-500 hover:bg-red-600' :
-                            item.category === 'Supply' ? 'bg-green-500 hover:bg-green-600' :
-                              item.category === 'Logistics' ? 'bg-blue-500 hover:bg-blue-600' :
-                                'bg-zinc-800 hover:bg-zinc-700'
-                          } text-white border-0 shadow-sm backdrop-blur-sm`}>
-                          {item.category || 'News'}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                      {/* Trust Badge Overlay (Compact) */}
+                      <div className="absolute bottom-3 left-3">
+                        <Badge className={cn("text-[10px] h-5 border-0 text-white backdrop-blur-md px-2",
+                          item.trustLevel === 'High' ? "bg-green-600/90" :
+                            item.trustLevel === 'Medium' ? "bg-amber-600/90" : "bg-red-600/90"
+                        )}>
+                          {item.trustLevel || 'Medium'} Trust
                         </Badge>
                       </div>
-
-                      {/* Trust Badge on Image */}
-                      {item.reliability && (
-                        <div className="absolute bottom-3 right-3">
-                          <Badge variant="secondary" className="bg-black/60 text-white backdrop-blur-md border-0 text-[10px] gap-1">
-                            {item.reliability > 0.85 ? <div className="h-1.5 w-1.5 rounded-full bg-green-400" /> : <div className="h-1.5 w-1.5 rounded-full bg-amber-400" />}
-                            {(item.reliability * 100).toFixed(0)}% Trust
-                          </Badge>
-                        </div>
-                      )}
                     </div>
 
-                    {/* Content */}
-                    <div className="flex flex-col flex-1 space-y-2">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-primary">{item.source}</span>
-                          <span>•</span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(item.published_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                          </span>
-                        </div>
+                    {/* BOTTOM: Content Structure */}
+                    <div className="flex flex-col flex-1 p-4 gap-3">
 
-                        {/* Consensus Dots Small */}
-                        {(item.related_links?.length > 0 || item.source_count > 1) && (
-                          <div className="flex gap-0.5" title="Consensus">
-                            {[1, 2, 3].map(i => (
-                              <div key={i} className={`h-1 w-1 rounded-full ${(item.source_count || item.related_links?.length || 1) >= i
-                                ? 'bg-primary' : 'bg-primary/20'}`} />
-                            ))}
-                          </div>
-                        )}
+                      {/* 1. METADATA: Category | Source | Date */}
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        <Badge variant="outline" className={cn("border-0 bg-opacity-10 text-[10px] px-2 h-5",
+                          item.category === 'Market' ? "text-blue-600 bg-blue-100" :
+                            item.category === 'Supply' ? "text-emerald-600 bg-emerald-100" :
+                              item.category === 'Logistics' ? "text-purple-600 bg-purple-100" :
+                                "text-slate-600 bg-slate-100"
+                        )}>
+                          {item.category || "General"}
+                        </Badge>
+                        <span className="text-border/60">|</span>
+                        <span className="truncate max-w-[120px] text-foreground font-bold">{item.source || "Unknown Source"}</span>
+                        <span className="text-border/60">|</span>
+                        <span>
+                          {item.publishedAt && !isNaN(new Date(item.publishedAt).getTime())
+                            ? new Date(item.publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                            : `Retrieved: ${new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`}
+                        </span>
                       </div>
 
-                      <h2 className="text-lg font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                        {item.title}
-                      </h2>
+                      {/* 2. INSIGHT: Title & Context */}
+                      <div className="flex-1 space-y-2">
+                        <h3 className="text-base font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
+                          {item.title}
+                        </h3>
 
-                      <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">
-                        {item.summary || item.content?.substring(0, 150) + "..."}
-                      </p>
-
-                      <div className="pt-2 mt-auto flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-xs font-semibold text-foreground group-hover:underline decoration-primary decoration-2 underline-offset-4">
-                          Read Analysis <TrendingUp className="h-3 w-3" />
+                        {/* Context Strip */}
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <span className="bg-secondary/50 px-1.5 py-0.5 rounded">Tier {item.sourceTier || "?"}</span>
+                          {item.title.toLowerCase().includes('vietnam') && <span className="bg-secondary/50 px-1.5 py-0.5 rounded">Region: Vietnam</span>}
+                          {item.trustReasons?.includes('High Consensus') && <span className="bg-secondary/50 px-1.5 py-0.5 rounded text-primary">High Consensus</span>}
                         </div>
 
-                        {/* Direct Link Icon */}
-                        {item.url && (
-                          <a
-                            href={item.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded-full hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={(e) => e.stopPropagation()} // Prevent modal opening
-                            title="Open original source"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        )}
+                        {/* 3. KEY TAKEAWAY (Formatted Bullets) */}
+                        <div className="relative pl-3 border-l-2 border-primary/30 mt-3 pt-1">
+                          {/* Simple heuristic to split long summary into pseudo-bullets if possible, else just show text */}
+                          <div className="text-sm text-muted-foreground leading-relaxed text-justify space-y-1">
+                            {item.summary && item.summary.length > 100 ? (
+                              <>
+                                <p className="line-clamp-4">
+                                  <span className="font-semibold text-foreground/80">Insight: </span>
+                                  {item.summary.split('. ')[0]}.
+                                </p>
+                                {/* Optional 2nd point if summary is long enough */}
+                                {item.summary.split('. ').length > 1 && (
+                                  <p className="line-clamp-2 italic text-xs mt-1">
+                                    "{item.summary.split('. ').slice(1).join('. ').substring(0, 100)}..."
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <p className="italic">"{item.summary || "No specific details available."}"</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-border/40 w-full my-1" />
+
+                      {/* 4. FOOTER: Consensus -> CTA */}
+                      <div className="flex items-center justify-between pt-1">
+
+                        {/* Consensus / Trust Details (Expandable in theory, tooltipped here) */}
+                        <div className="flex items-center gap-3">
+                          {(item.related_links?.length > 0) ? (
+                            <div className="flex flex-col group/consensus cursor-help">
+                              <div className="flex items-center gap-1.5">
+                                <span className="flex h-2 w-2 relative">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                <span className="text-xs font-bold text-foreground">
+                                  High Consensus ({item.related_links.length + 1})
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-muted-foreground hidden group-hover/consensus:block absolute bg-popover px-2 py-1 rounded border shadow-lg -mt-8 ml-4 z-50 w-48">
+                                Also covered by {item.related_links.map(l => l.source).join(', ')}...
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-muted-foreground flex items-center gap-1" title={(item.trustReasons || []).join('\n')}>
+                              Single Source <HelpCircle className="h-3 w-3" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* ACTION CTA */}
+                        <a
+                          href={item.url || item.originalUrl || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs font-bold text-white bg-primary hover:bg-primary/90 px-3 py-1.5 rounded-lg transition-all shadow-sm active:scale-95"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read on {item.source?.split(' ')[0] || 'Source'}
+                          <ExternalLink className="ml-1 h-3 w-3" />
+                        </a>
                       </div>
                     </div>
                   </article>
@@ -262,37 +301,36 @@ const NewsWatchPage = () => {
 
                 <div className="px-6 pb-6 -mt-12 relative">
                   {/* A. HEADER SECTION */}
-                  {/* A. HEADER SECTION */}
                   <div className="bg-card border border-border/50 shadow-sm rounded-xl p-5 mb-6">
                     {/* Unified Metadata Line */}
                     <div className="flex flex-wrap items-center gap-3 text-xs font-semibold tracking-wider uppercase text-muted-foreground mb-4">
                       <Badge variant="outline" className={
-                        selectedArticle.category === 'price' ? 'text-red-600 border-red-200 bg-red-50' :
-                          selectedArticle.category === 'supply' ? 'text-green-600 border-green-200 bg-green-50' :
+                        selectedArticle.category === 'Market' ? 'text-red-600 border-red-200 bg-red-50' :
+                          selectedArticle.category === 'Supply' ? 'text-green-600 border-green-200 bg-green-50' :
                             'text-blue-600 border-blue-200 bg-blue-50'
                       }>
                         {selectedArticle.category || 'General'}
                       </Badge>
-                      <span>{new Date(selectedArticle.published_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                      <span>{selectedArticle.publishedAt ? new Date(selectedArticle.publishedAt).toLocaleDateString() : "Unknown Date"}</span>
 
                       <div className="h-4 w-px bg-border/60 mx-1" />
 
                       {/* Trust & Consensus Group */}
-                      {selectedArticle.reliability && (
-                        <span className={`flex items-center gap-1.5 ${selectedArticle.reliability > 0.85 ? 'text-green-600' : 'text-amber-600'}`}>
-                          {selectedArticle.reliability > 0.85 ? <div className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" /> : null}
-                          {(selectedArticle.reliability * 100).toFixed(0)}% Trust
+                      {selectedArticle.trustScore && (
+                        <span className={`flex items-center gap-1.5 ${selectedArticle.trustScore >= 80 ? 'text-green-600' : 'text-amber-600'}`} title={selectedArticle.trustReasons?.join(', ')}>
+                          <div className={`h-1.5 w-1.5 rounded-full ${selectedArticle.trustScore >= 80 ? "bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]" : "bg-amber-500"}`} />
+                          {selectedArticle.trustScore}% Trust
                         </span>
                       )}
 
-                      {(selectedArticle.related_links?.length > 1 || selectedArticle.source_count > 1) && (
+                      {(selectedArticle.related_links?.length > 0 || selectedArticle.source_count > 1) && (
                         <>
                           <span className="text-border/40">•</span>
                           <span className="flex items-center gap-1 text-primary">
                             {/* Simple Dots for Consensus */}
                             <div className="flex gap-0.5">
                               {[1, 2, 3].map(i => (
-                                <div key={i} className={`h-1 w-1 rounded-full ${(selectedArticle.source_count || selectedArticle.related_links?.length) >= (i * 2)
+                                <div key={i} className={`h-1 w-1 rounded-full ${(selectedArticle.source_count || selectedArticle.related_links?.length || 1) >= i
                                   ? 'bg-primary' : 'bg-primary/20'
                                   }`} />
                               ))}

@@ -47,10 +47,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // Middleware
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
-  credentials: true
-}));
+app.use(cors());
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -112,22 +109,6 @@ async function ensureSampleDataExists() {
 
 // ========== HEALTH CHECK ENDPOINT ==========
 
-app.get('/', (_req, res) => {
-  res.json({
-    service: 'Cashew Forecast API',
-    version: settings.appVersion,
-    status: 'running',
-    mode: settings.demoMode ? 'demo' : 'production',
-    timestamp: new Date().toISOString(),
-    endpoints: {
-      auth: '/api/v1/auth',
-      dashboard: '/api/v1/dashboard',
-      price: '/api/v1/price',
-      lstm: '/api/v1/lstm'
-    }
-  });
-});
-
 app.get('/health', (_req, res) => {
   res.json({
     status: 'healthy',
@@ -142,6 +123,29 @@ app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/price', priceRouter);
 app.use('/api/v1/lstm', lstmRouter);
 app.use('/api/v1/parity', parityRouter);
+
+// ========== FRONTEND STATIC SERVING (Single Entrypoint) ==========
+
+// Serve static files from the React/Next.js build directory
+const frontendPath = path.join(__dirname, '../../frontend/out');
+
+console.log(`[Server] Serving frontend from: ${frontendPath}`);
+app.use(express.static(frontendPath));
+
+// Handle SPA routing: serve index.html for any non-API routes
+app.get('*', (req, res, next) => {
+  // Skip API routes that weren't caught (let 404 handler handle them if they start with /api)
+  if (req.url.startsWith('/api/')) {
+    return next();
+  }
+
+  res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
+    if (err) {
+      // If index.html is missing (e.g. not built yet), fall through to 404
+      next();
+    }
+  });
+});
 
 // ========== ERROR HANDLING MIDDLEWARE ==========
 
@@ -201,7 +205,7 @@ async function startServer() {
       console.log('\n' + '='.repeat(60));
       console.log('  🚀 Cashew Forecast Backend Server');
       console.log('='.repeat(60));
-      console.log(`  📡 Server: http://localhost:${port}`);
+      console.log(`  📡 Server (UI + API): http://localhost:${port}`);
       console.log(`  🔐 Auth API: http://localhost:${port}/api/v1/auth`);
       console.log(`  📊 Dashboard: http://localhost:${port}/api/v1/dashboard`);
       console.log(`  💰 Price API: http://localhost:${port}/api/v1/price`);

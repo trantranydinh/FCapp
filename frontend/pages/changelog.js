@@ -6,6 +6,13 @@ import { GitCommit, Tag } from 'lucide-react';
 
 const changes = [
     {
+        version: "v2.0.0",
+        date: "2026-01-21",
+        type: "Major Release",
+        title: "Unified Architecture & Data Lakehouse",
+        description: "Refactored application to Single Entrypoint (Standardized URL). Integrated Direct Data Lakehouse connection for Raw and Forecast data tables. Optimized Parity Tool history lookup."
+    },
+    {
         version: "v1.2.0",
         date: "2025-12-17",
         type: "Feature",

@@ -180,15 +180,23 @@ router.get('/me', (req, res) => {
   }
 });
 
+// Helper to determine the Callback URI
+const getRedirectUri = () => {
+  if (process.env.AZURE_AD_REDIRECT_URI) return process.env.AZURE_AD_REDIRECT_URI;
+  const baseUrl = process.env.BASE_URL || `http://localhost:${settings.port}`;
+  return `${baseUrl}/api/v1/auth/azure/callback`;
+};
+
 /**
  * GET /api/v1/auth/azure/login
  * Initiate Azure AD SSO
  */
 router.get('/azure/login', (req, res) => {
+  const redirectUri = getRedirectUri();
   const authorizationUrl = `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/oauth2/v2.0/authorize` +
     `?client_id=${process.env.AZURE_AD_CLIENT_ID}` +
     `&response_type=code` +
-    `&redirect_uri=${encodeURIComponent(process.env.AZURE_AD_REDIRECT_URI)}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&response_mode=query` +
     `&scope=openid%20profile%20email%20User.Read` +
     `&state=12345`; // Should specific secure state in production
@@ -211,15 +219,18 @@ router.get('/azure/callback', async (req, res) => {
 
     console.log('[AzureAuth] Received code, identifying user...');
 
+    const redirectUri = getRedirectUri();
+
     // Exchange code for token
     const tokenUrl = `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/oauth2/v2.0/token`;
     const params = new URLSearchParams();
     params.append('client_id', process.env.AZURE_AD_CLIENT_ID);
     params.append('scope', 'openid profile email User.Read');
     params.append('code', code);
-    params.append('redirect_uri', process.env.AZURE_AD_REDIRECT_URI);
+    params.append('redirect_uri', redirectUri);
     params.append('grant_type', 'authorization_code');
     params.append('client_secret', process.env.AZURE_AD_CLIENT_SECRET);
+
 
     const tokenResponse = await fetch(tokenUrl, {
       method: 'POST',
@@ -264,11 +275,11 @@ router.get('/azure/callback', async (req, res) => {
     res.cookie('session_timestamp', Date.now().toString(), cookieConfig);
 
     // Redirect to Dashboard
-    res.redirect('http://localhost:5173/dashboard');
+    res.redirect('/dashboard');
 
   } catch (error) {
     console.error('[AzureAuth] Callback Error:', error);
-    res.redirect('http://localhost:5173/login?error=auth_failed');
+    res.redirect('/login?error=auth_failed');
   }
 });
 

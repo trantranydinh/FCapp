@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const baseURL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
 export const api = axios.create({
   baseURL,
@@ -23,7 +23,7 @@ export const handleError = (error) => {
   if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
     throw new Error(
       "Cannot connect to backend server. " +
-      "Please ensure backend is running on http://localhost:8000. " +
+      "Please ensure backend is running on http://localhost:50005. " +
       "Run: cd backend && npm run dev"
     );
   }

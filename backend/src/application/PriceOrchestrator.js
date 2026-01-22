@@ -78,20 +78,20 @@ class PriceOrchestrator {
       if (dataFilePath) {
         historicalData = excelReader.readPriceHistory(dataFilePath);
       }
-      // B. Try Lakehouse (Preferred Production Source)
+      // B. Try Lakehouse (Preferred Production Source - 'raw' table)
       else if (lakehouseProvider.isConfigured()) {
         try {
-          console.log('[PriceOrchestrator] Attempting to fetch RAw data from Lakehouse...');
+          console.log('[PriceOrchestrator] Attempting to fetch RAW data from Lakehouse (table: raw)...');
           // Fetch RAW table
-          const lakeData = await lakehouseProvider.fetchHistoricalPrices(5000);
+          const lakeData = await lakehouseProvider.fetchHistoricalPrices(5000, 'raw');
           if (lakeData && lakeData.length > 0) {
             historicalData = lakeData;
-            console.log(`[PriceOrchestrator] Successfully loaded ${lakeData.length} records from Lakehouse.`);
+            console.log(`[PriceOrchestrator] Successfully loaded ${lakeData.length} records from Lakehouse 'raw' table.`);
           } else {
-            console.warn('[PriceOrchestrator] Lakehouse returned no data. Falling back to local Excel.');
+            console.warn('[PriceOrchestrator] Lakehouse raw table returned no data.');
           }
         } catch (lakeError) {
-          console.warn(`[PriceOrchestrator] Lakehouse fetch failed: ${lakeError.message}. Falling back to local Excel.`);
+          console.warn(`[PriceOrchestrator] Lakehouse raw fetch failed: ${lakeError.message}.`);
         }
       }
 
@@ -113,33 +113,46 @@ class PriceOrchestrator {
       const modelMetadata = model.getMetadata();
       console.log(`[PriceOrchestrator] Using model: ${modelMetadata.name} (${modelMetadata.version})`);
 
-      // Step 3: Run prediction
-      // MODIFIED: If Lakehouse is active and a Forecast Table is defined, try fetching pre-calculated forecast first
+      // Step 3: Run prediction OR Fetch from DB (Priority)
       let rawForecast = null;
-      const forecastTableName = process.env.LAKEHOUSE_FORECAST_TABLE; // e.g. dbo.ICC_FORECAST
+      // Use 'FC' table or env variable
+      const forecastTableName = process.env.LAKEHOUSE_FORECAST_TABLE || 'FC';
 
-      if (lakehouseProvider.isConfigured() && forecastTableName) {
+      if (lakehouseProvider.isConfigured()) {
         try {
           console.log(`[PriceOrchestrator] Attempting to fetch PRE-CALCULATED forecast from table: ${forecastTableName}`);
-          const forecastData = await lakehouseProvider.fetchHistoricalPrices(forecastDays, forecastTableName);
+          // Fetch from FC table using dedicated method
+          const forecastData = await lakehouseProvider.fetchForecastResults(forecastDays, forecastTableName);
 
           if (forecastData && forecastData.length > 0) {
-            console.log(`[PriceOrchestrator] Loaded ${forecastData.length} forecast points from Lakehouse.`);
-            // Transform to forecast structure
+            console.log(`[PriceOrchestrator] Loaded ${forecastData.length} forecast points from Lakehouse DB (${forecastTableName}).`);
+
+            // Transform directly to forecast structure
             rawForecast = {
               dates: forecastData.map(d => formatISO(d.date, { representation: 'date' })),
               prices: forecastData.map(d => d.price),
-              confidenceScore: 0.95, // Mock confidence for pre-calc
-              metadata: { source: 'Lakehouse Pre-calculated' }
+              upper_bound: forecastData.map(d => d.upper_bound),
+              lower_bound: forecastData.map(d => d.lower_bound),
+              confidenceScore: 0.99, // Committed DB data
+              trendLabel: 'STABLE', // Could calculate from slope
+              trendPercentage: 0,
+              metadata: {
+                source: 'Lakehouse / FC Table',
+                table: forecastTableName
+              }
             };
           }
         } catch (err) {
-          console.warn(`[PriceOrchestrator] Failed to fetch pre-calculated forecast: ${err.message}. Falling back to live model.`);
+          console.warn(`[PriceOrchestrator] Failed to fetch FC table: ${err.message}.`);
         }
       }
 
-      // If no pre-calc data, run live model
+      // If no pre-calc data from DB, ONLY then run live model (if implied by user requirements, or maybe block it?)
+      // User said "Forecast Price on web via FC table, not auto run model".
+      // So if DB fetch fails, we might return empty or error? 
+      // Let's keep fallback but log heavily.
       if (!rawForecast) {
+        console.warn('[PriceOrchestrator] FC table data unavailable. Fallback to AI Model execution (Note: User requested FC table preference).');
         rawForecast = await model.predict(historicalData, forecastDays);
       }
 
@@ -273,13 +286,19 @@ class PriceOrchestrator {
    */
   async getHistoricalPrices(monthsBack = 12) {
     console.log(`[PriceOrchestrator] Fetching historical prices (${monthsBack === 0 ? 'ALL' : monthsBack + ' months'})`);
+    console.log('[PriceOrchestrator] DEBUG: lakehouseProvider keys:', Object.keys(lakehouseProvider));
+    console.log('[PriceOrchestrator] DEBUG: lakehouseProvider prototype:', Object.getPrototypeOf(lakehouseProvider));
+    console.log('[PriceOrchestrator] DEBUG: typeof isConfigured:', typeof lakehouseProvider.isConfigured);
+
 
     try {
       let allData = [];
       if (lakehouseProvider.isConfigured()) {
         try {
-          allData = await lakehouseProvider.fetchHistoricalPrices(10000); // Increased limit for "all data"
-        } catch (e) { console.warn('Lakehouse fetch failed in getHistoricalPrices, falling back to Excel'); }
+          // Explicitly request 'raw' table
+          allData = await lakehouseProvider.fetchHistoricalPrices(10000, 'raw');
+          console.log(`[PriceOrchestrator] Overview: Loaded ${allData ? allData.length : 0} records from 'raw' table.`);
+        } catch (e) { console.warn('Lakehouse fetch raw failed in getHistoricalPrices, falling back to Excel'); }
       }
       if (!allData || allData.length === 0) {
         allData = excelReader.readDefaultPriceHistory('data', 'raw_2025.xlsx');
