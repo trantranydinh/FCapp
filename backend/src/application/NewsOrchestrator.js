@@ -12,10 +12,36 @@
 
 import path from 'path';
 import fs from 'fs-extra';
+import Redis from 'ioredis';
 import llmProvider from '../infrastructure/llm/LLMProvider.js';
 import newsCrawler from '../infrastructure/data/NewsCrawler.js';
 import databaseAdapter from '../infrastructure/db/DatabaseAdapter.js';
 import { settings } from '../settings.js';
+
+// Redis client for caching (optional - graceful degradation if not available)
+let redis = null;
+try {
+  const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+  redis = new Redis(REDIS_URL, {
+    maxRetriesPerRequest: 3,
+    enableReadyCheck: true,
+    lazyConnect: true
+  });
+
+  redis.on('error', (err) => {
+    console.warn('[NewsOrchestrator] Redis connection error, falling back to file cache:', err.message);
+    redis = null;
+  });
+
+  // Test connection
+  redis.connect().catch(() => {
+    console.warn('[NewsOrchestrator] Redis unavailable, using file-based cache only');
+    redis = null;
+  });
+} catch (error) {
+  console.warn('[NewsOrchestrator] Redis client initialization failed, using file cache only');
+  redis = null;
+}
 
 class NewsOrchestrator {
   constructor() {
@@ -75,10 +101,21 @@ class NewsOrchestrator {
       // Step 1: Crawl new data
       const newsItems = await newsCrawler.crawl({ keywords, limit: internalLimit });
 
-      // Step 2: Persist to file (or DB in future)
+      // Step 2: Persist to file
       await fs.ensureDir(path.dirname(this.newsFilePath));
       await fs.writeJson(this.newsFilePath, newsItems, { spaces: 2 });
       console.log(`[NewsOrchestrator] Saved ${newsItems.length} items to ${this.newsFilePath}`);
+
+      // Step 3: Update Redis cache
+      if (redis) {
+        try {
+          await redis.setex('news:latest', 900, JSON.stringify(newsItems)); // 15 min TTL
+          await redis.set('news:last_crawl_time', new Date().toISOString());
+          console.log('[NewsOrchestrator] Updated Redis cache with fresh data');
+        } catch (redisError) {
+          console.warn('[NewsOrchestrator] Failed to update Redis cache:', redisError.message);
+        }
+      }
 
       return newsItems;
 
@@ -89,12 +126,26 @@ class NewsOrchestrator {
   }
 
   /**
-   * Load news items from storage
+   * Load news items from storage (Redis → File → Crawl fallback)
    * @private
    */
   async _loadNewsItems() {
     try {
-      // Check if file exists
+      // Level 1: Try Redis cache first (fastest - ~1ms)
+      if (redis) {
+        try {
+          const cached = await redis.get('news:latest');
+          if (cached) {
+            const data = JSON.parse(cached);
+            console.log(`[NewsOrchestrator] Serving from Redis cache (${data.length} items)`);
+            return data;
+          }
+        } catch (redisError) {
+          console.warn('[NewsOrchestrator] Redis read failed, falling back to file:', redisError.message);
+        }
+      }
+
+      // Level 2: Try file cache (slower - ~5-10ms)
       const exists = await fs.pathExists(this.newsFilePath);
 
       if (exists) {
@@ -103,27 +154,37 @@ class NewsOrchestrator {
         const mtime = new Date(stats.mtime);
         const ageMinutes = (now - mtime) / (1000 * 60);
 
-        // If file is older than 15 minutes, treat as expired (in dev mode, maybe stricter)
+        // If file is older than 15 minutes, treat as expired
         const CACHE_TTL_MINUTES = 15;
 
         if (ageMinutes < CACHE_TTL_MINUTES) {
-          console.log(`[NewsOrchestrator] Serving cache (age: ${Math.round(ageMinutes)}m)`);
           const data = await fs.readJson(this.newsFilePath);
           if (Array.isArray(data) && data.length > 0) {
+            console.log(`[NewsOrchestrator] Serving from file cache (age: ${Math.round(ageMinutes)}m)`);
+
+            // Update Redis cache for next time
+            if (redis) {
+              try {
+                await redis.setex('news:latest', 900, JSON.stringify(data)); // 15 min TTL
+                console.log('[NewsOrchestrator] Updated Redis cache from file');
+              } catch (redisError) {
+                console.warn('[NewsOrchestrator] Failed to update Redis:', redisError.message);
+              }
+            }
+
             return data;
           }
         } else {
           console.log(`[NewsOrchestrator] Cache expired (age: ${Math.round(ageMinutes)}m), refreshing...`);
-          // Proceed to undefined check -> triggers refresh
         }
       }
 
+      // Level 3: No cache available, crawl fresh
       console.warn('[NewsOrchestrator] No local news found, triggering fresh crawl...');
-      // Force a crawl using the new Real News Logic
       return await this.refreshNews({ keywords: ['cashew'], limit: 12 });
 
     } catch (error) {
-      console.warn('[NewsOrchestrator] Failed to load news file, using fallback:', error.message);
+      console.warn('[NewsOrchestrator] Failed to load news, using fallback:', error.message);
       return this._getFallbackNews();
     }
   }

@@ -28,7 +28,7 @@ class NewsWorker {
             },
             {
                 connection,
-                concurrency: 2,
+                concurrency: 5, // Increased from 2 to 5 for better throughput
             }
         );
 
@@ -154,30 +154,29 @@ class NewsWorker {
     }
 
     async saveToBronze(profileId, articles) {
-        const ids = [];
+        if (articles.length === 0) return [];
 
-        for (const article of articles) {
-            const id = uuidv4();
+        const ids = articles.map(() => uuidv4());
+        const values = articles.map((article, i) => [
+            ids[i],
+            profileId,
+            article.source,
+            article.title,
+            article.url,
+            article.content,
+            article.publishedAt,
+            JSON.stringify(article)
+        ]);
 
-            await db.query(
-                `INSERT INTO bronze.raw_news
-         (id, profile_id, source, title, url, content, published_at, raw_data)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    id,
-                    profileId,
-                    article.source,
-                    article.title,
-                    article.url,
-                    article.content,
-                    article.publishedAt,
-                    JSON.stringify(article),
-                ]
-            );
+        // Batch insert - single query instead of N queries
+        await db.query(
+            `INSERT INTO bronze.raw_news
+            (id, profile_id, source, title, url, content, published_at, raw_data)
+            VALUES ?`,
+            [values]
+        );
 
-            ids.push(id);
-        }
-
+        console.log(`[News Worker] Batch inserted ${ids.length} articles to Bronze`);
         return ids;
     }
 
@@ -342,30 +341,36 @@ Respond in JSON format:
     }
 
     async saveToGold(profileId, jobId, rankedArticles) {
-        for (const article of rankedArticles) {
-            await db.query(
-                `INSERT INTO gold.news_ranked
-         (profile_id, job_id, news_id, news_title, news_url, published_at,
-          accuracy_score, reliability_score, recency_score, impact_score,
-          final_score, final_rank, ranked_by, reasoning)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'claude-3.5-sonnet', ?)`,
-                [
-                    profileId,
-                    jobId,
-                    article.newsId,
-                    article.title,
-                    article.url,
-                    article.publishedAt,
-                    article.accuracyScore,
-                    article.reliabilityScore,
-                    article.recencyScore,
-                    article.impactScore,
-                    article.finalScore,
-                    article.finalRank,
-                    article.reasoning,
-                ]
-            );
-        }
+        if (rankedArticles.length === 0) return;
+
+        const values = rankedArticles.map(article => [
+            profileId,
+            jobId,
+            article.newsId,
+            article.title,
+            article.url,
+            article.publishedAt,
+            article.accuracyScore,
+            article.reliabilityScore,
+            article.recencyScore,
+            article.impactScore,
+            article.finalScore,
+            article.finalRank,
+            'claude-3.5-sonnet',
+            article.reasoning
+        ]);
+
+        // Batch insert - single query instead of N queries
+        await db.query(
+            `INSERT INTO gold.news_ranked
+            (profile_id, job_id, news_id, news_title, news_url, published_at,
+             accuracy_score, reliability_score, recency_score, impact_score,
+             final_score, final_rank, ranked_by, reasoning)
+            VALUES ?`,
+            [values]
+        );
+
+        console.log(`[News Worker] Batch inserted ${rankedArticles.length} articles to Gold`);
     }
 
     generateSummary(rankedArticles) {
