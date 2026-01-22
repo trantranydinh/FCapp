@@ -14,6 +14,12 @@ import * as cheerio from 'cheerio';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import axios from 'axios';
+import pLimit from 'p-limit';
+import fs from 'fs-extra';
+import path from 'path';
+
+// Cache file location
+const CACHE_FILE = path.resolve(process.cwd(), 'data', 'news_cache.json');
 
 const rssParser = new Parser({
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' },
@@ -77,6 +83,7 @@ class ZeroDuplicateImageResolver {
         this.usedImages = new Set();
         this.articleImageMap = new Map();
         this.imagePools = IMAGE_POOLS;
+        this.ogFetchLimit = pLimit(5); // Max 5 concurrent OG image fetches
     }
 
     reset() {
@@ -103,9 +110,9 @@ class ZeroDuplicateImageResolver {
             imageSource = 'rss';
         }
 
-        // LEVEL 2: Open Graph (Deep Fetch)
+        // LEVEL 2: Open Graph (Deep Fetch) - with concurrency limit
         if (!imageUrl && article.link) {
-            imageUrl = await this.fetchOGImage(article.link);
+            imageUrl = await this.ogFetchLimit(() => this.fetchOGImage(article.link));
             if (imageUrl) {
                 imageSource = 'og';
             }
