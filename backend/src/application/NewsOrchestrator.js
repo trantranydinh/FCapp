@@ -12,7 +12,6 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import Redis from 'ioredis';
 import llmProvider from '../infrastructure/llm/LLMProvider.js';
 import newsCrawler from '../infrastructure/data/NewsCrawler.js';
 import databaseAdapter from '../infrastructure/db/DatabaseAdapter.js';
@@ -69,6 +68,11 @@ try {
 class NewsOrchestrator {
   constructor() {
     this.newsFilePath = path.resolve(process.cwd(), 'data', 'demo_news.json');
+
+    // In-memory cache (faster than file, simpler than Redis)
+    this.memoryCache = null;
+    this.cacheTimestamp = null;
+    this.CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
   }
 
   isCacheAvailable() {
@@ -141,7 +145,6 @@ class NewsOrchestrator {
       // Step 2: Persist to file
       await fs.ensureDir(path.dirname(this.newsFilePath));
       await fs.writeJson(this.newsFilePath, newsItems, { spaces: 2 });
-      console.log(`[NewsOrchestrator] Saved ${newsItems.length} items to ${this.newsFilePath}`);
 
       // Step 3: Update Redis cache
       if (this.isCacheAvailable()) {
@@ -153,6 +156,11 @@ class NewsOrchestrator {
           // Silent fail or low-level warn
         }
       }
+      // Step 3: Update in-memory cache
+      this.memoryCache = newsItems;
+      this.cacheTimestamp = Date.now();
+
+      console.log(`[NewsOrchestrator] Saved ${newsItems.length} items to file and memory cache`);
 
       return newsItems;
 
@@ -163,7 +171,7 @@ class NewsOrchestrator {
   }
 
   /**
-   * Load news items from storage (Redis → File → Crawl fallback)
+   * Load news items from storage (Memory → File → Crawl fallback)
    * @private
    */
   async _loadNewsItems() {
@@ -179,6 +187,17 @@ class NewsOrchestrator {
           }
         } catch (redisError) {
           // Ignore read errors, fall through
+      const now = Date.now();
+
+      // Level 1: Try in-memory cache first (fastest - <1ms)
+      if (this.memoryCache && this.cacheTimestamp) {
+        const cacheAge = now - this.cacheTimestamp;
+        if (cacheAge < this.CACHE_TTL_MS) {
+          const ageMinutes = Math.round(cacheAge / 60000);
+          console.log(`[NewsOrchestrator] ✅ Serving from memory cache (${this.memoryCache.length} items, age: ${ageMinutes}m)`);
+          return this.memoryCache;
+        } else {
+          console.log(`[NewsOrchestrator] Memory cache expired (age: ${Math.round(cacheAge / 60000)}m)`);
         }
       }
 
@@ -187,14 +206,11 @@ class NewsOrchestrator {
 
       if (exists) {
         const stats = await fs.stat(this.newsFilePath);
-        const now = new Date();
         const mtime = new Date(stats.mtime);
-        const ageMinutes = (now - mtime) / (1000 * 60);
+        const fileAge = now - mtime.getTime();
+        const ageMinutes = fileAge / 60000;
 
-        // If file is older than 15 minutes, treat as expired
-        const CACHE_TTL_MINUTES = 15;
-
-        if (ageMinutes < CACHE_TTL_MINUTES) {
+        if (fileAge < this.CACHE_TTL_MS) {
           const data = await fs.readJson(this.newsFilePath);
           if (Array.isArray(data) && data.length > 0) {
             console.log(`[NewsOrchestrator] Serving from file cache (age: ${Math.round(ageMinutes)}m)`);
@@ -208,17 +224,24 @@ class NewsOrchestrator {
                 // Ignore
               }
             }
+            // Update in-memory cache for next time
+            this.memoryCache = data;
+            this.cacheTimestamp = now;
 
+            console.log(`[NewsOrchestrator] ✅ Loaded from file cache (${data.length} items, age: ${Math.round(ageMinutes)}m), cached to memory`);
             return data;
           }
         } else {
-          console.log(`[NewsOrchestrator] Cache expired (age: ${Math.round(ageMinutes)}m), refreshing...`);
+          console.log(`[NewsOrchestrator] File cache expired (age: ${Math.round(ageMinutes)}m), refreshing...`);
         }
       }
 
       // Level 3: No cache available, crawl fresh
-      console.warn('[NewsOrchestrator] No local news found, triggering fresh crawl...');
-      return await this.refreshNews({ keywords: ['cashew'], limit: 12 });
+      console.warn('[NewsOrchestrator] No cache found, triggering fresh crawl...');
+      const freshData = await this.refreshNews({ keywords: ['cashew'], limit: 12 });
+
+      // Memory cache already updated in refreshNews()
+      return freshData;
 
     } catch (error) {
       console.warn('[NewsOrchestrator] Failed to load news, using fallback:', error.message);

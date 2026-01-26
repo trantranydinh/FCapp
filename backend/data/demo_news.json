@@ -13,6 +13,14 @@
     "publishedAt": "2026-01-26T00:57:00.000Z",
     "trustScore": 50,
     "trustLevel": "Medium",
+    "id": "demo-1-fallback",
+    "title": "Global Cashew Market Report 2025: Production Estimates",
+    "source": "CommodityHQ",
+    "sourceTier": "B",
+    "publishedAt": "2026-01-22T07:43:52.804Z",
+    "summary": "Comprehensive analysis of global RCN output, highlighting resilient production in West Africa despite weather challenges.",
+    "overallScore": 90,
+    "trustScore": 85,
     "trustReasons": [
       "Source Type: Aggregator"
     ],
@@ -1214,6 +1222,14 @@
     "publishedAt": "2025-12-09T08:00:00.000Z",
     "trustScore": 50,
     "trustLevel": "Medium",
+    "id": "demo-2-fallback",
+    "title": "Vietnam Cashew Exports Hit Record High in Q4",
+    "source": "Vinacas",
+    "sourceTier": "A",
+    "publishedAt": "2026-01-22T02:43:52.804Z",
+    "summary": "Processing hubs in Vietnam report strong demand from US and European buyers ahead of the holiday season.",
+    "overallScore": 95,
+    "trustScore": 95,
     "trustReasons": [
       "Source Type: Aggregator"
     ],
