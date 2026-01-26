@@ -61,12 +61,18 @@ router.get('/historical-data', async (req, res, next) => {
  */
 router.get('/news-summary', async (req, res, next) => {
   try {
-    const limit = parseInt(req.query.limit || '5', 10);
-    if (isNaN(limit) || limit < 1 || limit > 20) {
-      return res.status(400).json({ success: false, error: 'Invalid limit. Must be between 1 and 20' });
+    const limit = parseInt(req.query.limit || '12', 10);
+    const page = parseInt(req.query.page || '1', 10);
+
+    if (isNaN(limit) || limit < 1 || limit > 100) {
+      return res.status(400).json({ success: false, error: 'Invalid limit. Must be between 1 and 100' });
     }
-    console.log(`[Dashboard API] GET /news-summary (limit: ${limit})`);
-    const summary = await newsOrchestrator.getNewsSummary(limit);
+    if (isNaN(page) || page < 1) {
+      return res.status(400).json({ success: false, error: 'Invalid page. Must be positive integer' });
+    }
+
+    console.log(`[Dashboard API] GET /news-summary (limit: ${limit}, page: ${page})`);
+    const summary = await newsOrchestrator.getNewsSummary(limit, page);
     res.json({ success: true, data: summary });
   } catch (error) {
     console.error('[Dashboard API] News summary failed:', error.message);
@@ -84,7 +90,7 @@ router.post('/news-refresh', async (req, res, next) => {
     const { keywords = [], limit = 10 } = req.body;
 
     if (!Array.isArray(keywords)) return res.status(400).json({ success: false, error: 'keywords must be an array' });
-    if (typeof limit !== 'number' || limit < 1 || limit > 50) return res.status(400).json({ success: false, error: 'limit must be a number between 1 and 50' });
+    if (typeof limit !== 'number' || limit < 1 || limit > 100) return res.status(400).json({ success: false, error: 'limit must be a number between 1 and 100' });
 
     const result = await newsOrchestrator.refreshNews({ keywords, limit });
     res.json({ success: true, message: 'News data refreshed successfully', data: result });

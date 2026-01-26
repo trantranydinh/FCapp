@@ -18,35 +18,61 @@ import newsCrawler from '../infrastructure/data/NewsCrawler.js';
 import databaseAdapter from '../infrastructure/db/DatabaseAdapter.js';
 import { settings } from '../settings.js';
 
-// Redis client for caching (optional - graceful degradation if not available)
-let redis = null;
+// Setup Redis with suppression logic
+let redisClient = null;
+let redisAvailable = false;
+let redisErrorLogged = false;
+
 try {
   const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-  redis = new Redis(REDIS_URL, {
-    maxRetriesPerRequest: 3,
-    enableReadyCheck: true,
-    lazyConnect: true
+  redisClient = new Redis(REDIS_URL, {
+    maxRetriesPerRequest: 1, // Fail fast
+    enableReadyCheck: false, // Don't block
+    lazyConnect: true,
+    retryStrategy: (times) => {
+      if (times > 3) {
+        if (!redisErrorLogged) {
+          console.warn('[NewsOrchestrator] Redis unavailable after max retries. Disabling cache.');
+          redisErrorLogged = true;
+        }
+        redisAvailable = false;
+        return null; // Stop retrying
+      }
+      return Math.min(times * 100, 2000);
+    }
   });
 
-  redis.on('error', (err) => {
-    console.warn('[NewsOrchestrator] Redis connection error, falling back to file cache:', err.message);
-    redis = null;
+  redisClient.on('error', (err) => {
+    // Only log distinct errors or once per downtime to avoid spam
+    if (!redisErrorLogged) {
+      console.warn('[NewsOrchestrator] Redis connection warning:', err.message);
+      redisErrorLogged = true;
+    }
+    redisAvailable = false;
   });
 
-  // Test connection
-  redis.connect().catch(() => {
-    console.warn('[NewsOrchestrator] Redis unavailable, using file-based cache only');
-    redis = null;
+  redisClient.on('connect', () => {
+    if (redisErrorLogged) {
+      console.log('[NewsOrchestrator] Redis re-connected.');
+      redisErrorLogged = false;
+    }
+    redisAvailable = true;
   });
+
+  // Attempt initial connect but don't await/block module load
+  redisClient.connect().catch(() => { });
+
 } catch (error) {
-  console.warn('[NewsOrchestrator] Redis client initialization failed, using file cache only');
-  redis = null;
+  redisAvailable = false;
 }
 
 class NewsOrchestrator {
   constructor() {
-    // Default to data directory for news storage
     this.newsFilePath = path.resolve(process.cwd(), 'data', 'demo_news.json');
+  }
+
+  isCacheAvailable() {
+    return redisAvailable && redisClient && redisClient.status === 'ready';
   }
 
   /**
@@ -55,25 +81,36 @@ class NewsOrchestrator {
    * @param {number} limit - Maximum number of news items to return
    * @returns {Promise<object>} News summary with optional AI enhancements
    */
-  async getNewsSummary(limit = 5) {
-    if (!Number.isInteger(limit) || limit < 1 || limit > 20) {
-      throw new Error('limit must be an integer between 1 and 20');
+  async getNewsSummary(limit = 12, page = 1) {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error('limit must be an integer between 1 and 100');
+    }
+    if (!Number.isInteger(page) || page < 1) {
+      throw new Error('page must be a positive integer');
     }
 
-    console.log(`[NewsOrchestrator] Fetching news summary (limit: ${limit})`);
+    console.log(`[NewsOrchestrator] Fetching news summary (limit: ${limit}, page: ${page})`);
 
     try {
       // Step 1: Load news items
       const items = await this._loadNewsItems();
 
-      // Step 2: Select top N items
-      const topNews = items.slice(0, limit);
+      // Step 2: Calculate pagination
+      const totalCount = items.length;
+      const totalPages = Math.ceil(totalCount / limit);
+      const start = (page - 1) * limit;
+      const end = start + limit;
 
-      // Step 3: Enhance with AI (if enabled)
-      const enhancedNews = await this._enhanceNewsWithAI(topNews);
+      const pagedItems = items.slice(start, end);
+
+      // Step 3: Enhance with AI (if enabled) - Only for the items being shown
+      const enhancedNews = await this._enhanceNewsWithAI(pagedItems);
 
       return {
-        total_count: items.length,
+        total_count: totalCount,
+        total_pages: totalPages,
+        current_page: page,
+        limit: limit,
         top_news: enhancedNews,
         last_updated: new Date().toISOString()
       };
@@ -107,13 +144,13 @@ class NewsOrchestrator {
       console.log(`[NewsOrchestrator] Saved ${newsItems.length} items to ${this.newsFilePath}`);
 
       // Step 3: Update Redis cache
-      if (redis) {
+      if (this.isCacheAvailable()) {
         try {
-          await redis.setex('news:latest', 900, JSON.stringify(newsItems)); // 15 min TTL
-          await redis.set('news:last_crawl_time', new Date().toISOString());
+          await redisClient.setex('news:latest', 900, JSON.stringify(newsItems)); // 15 min TTL
+          await redisClient.set('news:last_crawl_time', new Date().toISOString());
           console.log('[NewsOrchestrator] Updated Redis cache with fresh data');
         } catch (redisError) {
-          console.warn('[NewsOrchestrator] Failed to update Redis cache:', redisError.message);
+          // Silent fail or low-level warn
         }
       }
 
@@ -132,16 +169,16 @@ class NewsOrchestrator {
   async _loadNewsItems() {
     try {
       // Level 1: Try Redis cache first (fastest - ~1ms)
-      if (redis) {
+      if (this.isCacheAvailable()) {
         try {
-          const cached = await redis.get('news:latest');
+          const cached = await redisClient.get('news:latest');
           if (cached) {
             const data = JSON.parse(cached);
             console.log(`[NewsOrchestrator] Serving from Redis cache (${data.length} items)`);
             return data;
           }
         } catch (redisError) {
-          console.warn('[NewsOrchestrator] Redis read failed, falling back to file:', redisError.message);
+          // Ignore read errors, fall through
         }
       }
 
@@ -163,12 +200,12 @@ class NewsOrchestrator {
             console.log(`[NewsOrchestrator] Serving from file cache (age: ${Math.round(ageMinutes)}m)`);
 
             // Update Redis cache for next time
-            if (redis) {
+            if (this.isCacheAvailable()) {
               try {
-                await redis.setex('news:latest', 900, JSON.stringify(data)); // 15 min TTL
+                await redisClient.setex('news:latest', 900, JSON.stringify(data)); // 15 min TTL
                 console.log('[NewsOrchestrator] Updated Redis cache from file');
               } catch (redisError) {
-                console.warn('[NewsOrchestrator] Failed to update Redis:', redisError.message);
+                // Ignore
               }
             }
 

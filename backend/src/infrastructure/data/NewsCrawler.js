@@ -132,20 +132,26 @@ class ZeroDuplicateImageResolver {
     }
 
     extractRSSImage(article) {
-        // Enclosure
-        if (article.enclosure && article.enclosure.url && article.enclosure.type?.startsWith('image')) {
-            return article.enclosure.url;
-        }
-        // Media content
-        if (article['media:content'] && article['media:content'].$ && article['media:content'].$.url) {
-            return article['media:content'].$.url;
-        }
-        // Image tag
-        if (article.image && article.image.url) {
-            return article.image.url;
-        }
-        // Parsed from extracted HTML in description
-        if (article.extractedImage) {
+        const findUrl = (obj) => {
+            if (!obj) return null;
+            if (typeof obj === 'string' && obj.startsWith('http')) return obj;
+            if (Array.isArray(obj)) return findUrl(obj[0]);
+            if (obj.$ && obj.$.url) return obj.$.url;
+            if (obj.url) return obj.url;
+            return null;
+        };
+
+        // Try mapped and original fields
+        let url = findUrl(article.media) ||
+            findUrl(article['media:content']) ||
+            findUrl(article.enclosure) ||
+            findUrl(article.image) ||
+            findUrl(article.thumbnail);
+
+        if (url && this.isValidImageUrl(url)) return url;
+
+        // Try extracted from HTML description
+        if (article.extractedImage && this.isValidImageUrl(article.extractedImage)) {
             return article.extractedImage;
         }
         return null;
@@ -242,7 +248,17 @@ class NewsCrawler {
     constructor() {
         this.imageResolver = new ZeroDuplicateImageResolver();
         this.rssParser = new Parser({
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' }
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' },
+            customFields: {
+                item: [
+                    ['image', 'image'],
+                    ['media:content', 'media'],
+                    ['enclosure', 'enclosure'],
+                    ['description', 'summary'],
+                    ['content:encoded', 'full_content'],
+                    ['dc:creator', 'author']
+                ]
+            }
         });
 
         this.sourceTiers = {
@@ -289,14 +305,36 @@ class NewsCrawler {
         const uniqueArticles = this._deduplicate(allArticles);
         console.log(`[NewsCrawler] Fetched ${allArticles.length} raw, deduplicated to ${uniqueArticles.length}`);
 
-        // 5. Enrich & Resolve Images
-        const enrichedArticles = await Promise.all(uniqueArticles.map(async (article) => {
-            // Resolve Image (3-Level Logic)
-            const resolvedImage = await this.imageResolver.resolveImage(article);
-
-            // Calculate Scores
+        // 5. Initial Assessment (Scoring without heavy I/O)
+        const scoredArticles = uniqueArticles.map(article => {
             const { trustScore, trustLevel, trustReasons } = this._calculateTrust(article);
             const relevanceScore = this._calculateRelevance(article, profile);
+            return {
+                ...article,
+                trustScore,
+                trustLevel,
+                trustReasons,
+                relevanceScore,
+                overallScore: Math.round((trustScore * 0.6) + (relevanceScore * 0.4))
+            };
+        });
+
+        // 6. Preliminary Sort (Date + Quality)
+        scoredArticles.sort((a, b) => {
+            const dateA = new Date(a.pubDate).getTime();
+            const dateB = new Date(b.pubDate).getTime();
+            if (dateB !== dateA) return dateB - dateA;
+            return b.overallScore - a.overallScore;
+        });
+
+        // 7. Limit to top 100 BEFORE heavy image resolution
+        const topArticles = scoredArticles.slice(0, 100);
+
+        // 8. Final Enrichment & Image Resolution (Only for the top subset)
+        console.log(`[NewsCrawler] Resolving images for top ${topArticles.length} candidates...`);
+        const final = await Promise.all(topArticles.map(async (article) => {
+            // Resolve Image (3-Level Logic) - Perform only on top candidates
+            const resolvedImage = await this.imageResolver.resolveImage(article);
 
             return {
                 id: this._generateId(article),
@@ -310,20 +348,17 @@ class NewsCrawler {
                 sourceTier: article.sourceTier,
                 category: this.imageResolver.detectCategory(article).charAt(0).toUpperCase() + this.imageResolver.detectCategory(article).slice(1),
                 publishedAt: article.pubDate,
-                trustScore,
-                trustLevel,
-                trustReasons,
-                relevanceScore,
-                overallScore: Math.round((trustScore * 0.6) + (relevanceScore * 0.4)),
+                trustScore: article.trustScore,
+                trustLevel: article.trustLevel,
+                trustReasons: article.trustReasons,
+                relevanceScore: article.relevanceScore,
+                overallScore: article.overallScore,
+                tags: this._generateTags(article),
                 related_links: article.related || []
             };
         }));
 
-        // 6. Sort & Limit
-        enrichedArticles.sort((a, b) => b.overallScore - a.overallScore);
-        const final = enrichedArticles.slice(0, 30);
-
-        // 7. Save Cache
+        // 9. Save Cache
         this._saveCache(final);
 
         return final;
@@ -362,8 +397,21 @@ class NewsCrawler {
     }
 
     _parseItem(item, sourceName) {
-        const rawDesc = item['content:encoded'] || item.content || item.summary || item.description || '';
-        const { cleanSummary, extractedPublisher, extractedImage } = this._parseHtml(rawDesc);
+        // Try to get raw description/content from multiple fields
+        const rawDesc = item.full_content || item.content || item.summary || item.description || item.contentSnippet || '';
+
+        // Parse HTML to get cleaned summary, publisher, and image
+        let { cleanSummary, extractedPublisher, extractedImage } = this._parseHtml(rawDesc, item.link);
+
+        // FALLBACK: If HTML parsing failed or returned empty, use contentSnippet or internal summary
+        if (!cleanSummary || cleanSummary.length < 10) {
+            cleanSummary = (item.contentSnippet || item.summary || item.content || '').replace(/\s+/g, ' ').trim();
+        }
+
+        // LAST RESORT: If still empty, use title
+        if (!cleanSummary || cleanSummary.length < 5) {
+            cleanSummary = item.title;
+        }
 
         let pubDate = item.pubDate || item.isoDate;
         if (!pubDate || isNaN(new Date(pubDate).getTime())) pubDate = new Date().toISOString();
@@ -383,7 +431,7 @@ class NewsCrawler {
         };
     }
 
-    _parseHtml(html) {
+    _parseHtml(html, baseUrl) {
         if (!html) return { cleanSummary: '', extractedPublisher: null, extractedImage: null };
         try {
             const $ = cheerio.load(html);
@@ -394,7 +442,10 @@ class NewsCrawler {
             if (fontTag.length) extractedPublisher = fontTag.text().trim();
 
             // Image
-            const extractedImage = $('img').first().attr('src');
+            let extractedImage = $('img').first().attr('src');
+            if (extractedImage && !extractedImage.startsWith('http') && baseUrl) {
+                try { extractedImage = new URL(extractedImage, baseUrl).href; } catch { }
+            }
 
             // Summary
             $('a, script, style, img, font').remove();
@@ -426,28 +477,58 @@ class NewsCrawler {
 
     _deduplicate(articles) {
         const map = new Map();
+        const urlMap = new Map();
 
         articles.forEach(a => {
-            // Norm Title: alphanumeric, first 40 chars
-            const key = a.title.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 40);
+            // 1. URL-based deduplication (strongest)
+            const cleanUrl = (a.link || '').split('?')[0].split('#')[0].toLowerCase().trim();
 
-            if (map.has(key)) {
-                const existing = map.get(key);
+            // 2. Title-based deduplication (more flexible)
+            // Remove common news prefixes and suffixes, normalize whitespace
+            const normTitle = a.title.toLowerCase()
+                .replace(/^(breaking|exclusive|update|report|news|video|audio):\s*/i, '')
+                .replace(/\s*\|\s*.*$/g, '') // Remove everything after pipe (often source info)
+                .replace(/[^a-z0-9]/g, '')
+                .substring(0, 100); // Increased from 40 for better precision
+
+            const urlKey = cleanUrl || null;
+            const titleKey = normTitle;
+
+            let existing = null;
+            if (urlKey && urlMap.has(urlKey)) existing = urlMap.get(urlKey);
+            else if (map.has(titleKey)) existing = map.get(titleKey);
+
+            if (existing) {
                 // Merge info
                 if (!existing.related) existing.related = [];
-                existing.related.push({ source: a.source, url: a.link });
+                // Only add to related if it's a different source/link
+                if (a.source !== existing.source || a.link !== existing.link) {
+                    existing.related.push({ source: a.source, url: a.link });
+                }
 
-                // Keep the one with better summary or more recent
-                if (a.summary.length > existing.summary.length) {
+                // Keep the one with better summary
+                if ((a.summary || '').length > (existing.summary || '').length) {
                     existing.summary = a.summary;
+                }
+
+                // MERGE ALL IMAGE DATA if existing is missing it
+                const imageFields = ['extractedImage', 'enclosure', 'media:content', 'image'];
+                const hasExistingImage = imageFields.some(f => existing[f]);
+                const hasNewImage = imageFields.some(f => a[f]);
+
+                if (!hasExistingImage && hasNewImage) {
+                    imageFields.forEach(f => {
+                        if (a[f]) existing[f] = a[f];
+                    });
                 }
             } else {
                 a.related = [];
-                map.set(key, a);
+                if (urlKey) urlMap.set(urlKey, a);
+                map.set(titleKey, a);
             }
         });
 
-        return Array.from(map.values());
+        return Array.from(new Set([...map.values(), ...urlMap.values()])); // Ensure unique values
     }
 
     _calculateTrust(article) {
@@ -480,7 +561,7 @@ class NewsCrawler {
         else if (finalScore >= 50) trustLevel = 'Medium';
 
         article.sourceTier = tier;
-        return { trustScore: finalScore, trustLevel, trustReasons };
+        return { trustScore: finalScore, trustLevel, trustReasons: reasons };
     }
 
     _extractDomain(url) {
@@ -494,6 +575,21 @@ class NewsCrawler {
             if (text.includes(k.toLowerCase())) score += 20;
         });
         return Math.min(100, score);
+    }
+
+    _generateTags(article) {
+        const tags = new Set();
+        const text = (article.title + ' ' + (article.summary || '')).toLowerCase();
+
+        if (text.includes('vietnam')) tags.add('Vietnam');
+        if (text.includes('africa') || text.includes('ivory coast') || text.includes('ghana')) tags.add('Africa');
+        if (text.includes('price') || text.includes('usd') || text.includes('market')) tags.add('Price');
+        if (text.includes('supply') || text.includes('crop') || text.includes('harvest')) tags.add('Supply');
+        if (text.includes('logistics') || text.includes('ship') || text.includes('port')) tags.add('Logistics');
+        if (text.includes('raw') || text.includes('rcn')) tags.add('RCN');
+        if (text.includes('kernel')) tags.add('Kernel');
+
+        return Array.from(tags);
     }
 
     _generateId(article) {
