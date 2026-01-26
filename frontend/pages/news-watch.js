@@ -1,26 +1,34 @@
 import Head from "next/head";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "../components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogContent } from "../components/ui/dialog";
 import { useNewsSummary } from "../hooks/useDashboardData";
-import { Newspaper, Tag, Calendar, TrendingUp, TrendingDown, ChevronDown, ChevronUp, X, ExternalLink, Search, Loader2 } from "lucide-react";
+import { Newspaper, Tag, Calendar, TrendingUp, TrendingDown, ChevronDown, ChevronUp, X, ExternalLink, Search, Loader2, HelpCircle } from "lucide-react";
 import { useSWRConfig } from "swr"; // Import for global mutate
 import { cn } from "../lib/utils";
 
 const NewsWatchPage = () => {
-  const [limit, setLimit] = useState(9); // Default to 9 for grid
+  const [limit, setLimit] = useState(12); // Default to 12 for grid
+  const [page, setPage] = useState(1);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [clientDate, setClientDate] = useState("");
 
-  const { data, isLoading } = useNewsSummary(limit);
+  const { data, isLoading } = useNewsSummary(limit, page);
   const { mutate } = useSWRConfig();
+
+  // Fix hydration mismatch for dates
+  useEffect(() => {
+    setClientDate(new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
+  }, []);
 
   // Access the nested data property from the API response
   const newsItems = data?.data?.top_news || [];
+  const pagination = data?.data || {};
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -37,7 +45,7 @@ const NewsWatchPage = () => {
 
       if (response.ok) {
         // Revalidate SWR cache to show new data
-        mutate(`/api/v1/dashboard/news-summary?limit=${limit}`);
+        mutate(`/api/v1/dashboard/news-summary?limit=${limit}&page=${page}`);
         setSearchQuery(""); // Optional: clear or keep
       }
     } catch (err) {
@@ -81,38 +89,85 @@ const NewsWatchPage = () => {
 
             {/* Filter and Search Controls */}
             <div className="flex flex-col items-end gap-3">
-              {/* Search Form */}
-              <form onSubmit={handleSearch} className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Search topics (e.g. Vietnam)..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-secondary/50 border border-border rounded-full pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-64 transition-all"
-                  />
-                </div>
-                <Button type="submit" size="sm" disabled={isRefreshing} className="rounded-full px-4">
-                  {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}
-                </Button>
-              </form>
-
-              {/* Limit Toggles */}
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground mr-2">Show:</span>
-                {[6, 12, 24, 100].map((value) => (
-                  <button
-                    key={value}
-                    onClick={() => setLimit(value)}
-                    className={`px-3 py-1 text-xs rounded-full transition-all ${limit === value
-                      ? "bg-foreground text-background font-medium"
-                      : "bg-secondary text-muted-foreground hover:bg-secondary/80"
-                      }`}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    setIsRefreshing(true);
+                    try {
+                      await fetch('/api/v1/dashboard/news-refresh', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ keywords: ['cashew'], limit: 30 })
+                      });
+                      mutate(`/api/v1/dashboard/news-summary?limit=${limit}&page=${page}`);
+                    } catch (e) { console.error(e); }
+                    finally { setIsRefreshing(false); }
+                  }}
+                  disabled={isRefreshing}
+                  className="h-9 px-3 text-xs"
+                >
+                  <Loader2 className={cn("h-3.5 w-3.5 mr-2", isRefreshing ? "animate-spin" : "")} />
+                  Refresh Fresh Data
+                </Button>
+
+                {/* Search Form */}
+                <form onSubmit={handleSearch} className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search topics..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="bg-secondary/50 border border-border rounded-full pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 w-48 transition-all"
+                    />
+                  </div>
+                </form>
+              </div>
+
+              {/* Pagination Info & Page Size */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
                   >
-                    {value === 100 ? 'All' : value}
-                  </button>
-                ))}
+                    <ChevronDown className="h-4 w-4 rotate-90" />
+                  </Button>
+                  <span className="text-xs font-medium min-w-[60px] text-center">
+                    Page {pagination.current_page || 1} / {pagination.total_pages || 1}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setPage(p => Math.min(pagination.total_pages || 1, p + 1))}
+                    disabled={page >= (pagination.total_pages || 1)}
+                  >
+                    <ChevronDown className="h-4 w-4 -rotate-90" />
+                  </Button>
+                </div>
+                <div className="h-4 w-px bg-border/60" />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">Per page:</span>
+                  {[12, 24, 48].map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => { setLimit(value); setPage(1); }}
+                      className={`px-3 py-1 text-xs rounded-full transition-all ${limit === value
+                        ? "bg-foreground text-background font-medium"
+                        : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                        }`}
+                    >
+                      {value}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
