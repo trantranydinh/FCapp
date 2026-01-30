@@ -3,8 +3,8 @@ import Head from "next/head";
 import DashboardLayout from "../components/DashboardLayout";
 import PriceChart from "../components/PriceChart";
 import KpiCardModern from "../components/KpiCardModern";
-import AIExplained from "../components/AIExplained";
-import ExecutiveOverview from "../components/ExecutiveOverview";
+import ForecastIntelligence from "../components/AIExplained";
+import InternalMarketOverview from "../components/ExecutiveOverview";
 // import ForecastNav from "../components/ForecastNav"; // Removed
 import FileUploadCard from "../components/FileUploadCard";
 import ForecastStepper from "../components/ForecastStepper";
@@ -150,8 +150,8 @@ const PriceForecastPage = () => {
       </Head>
       <DashboardLayout title="Price Forecast">
         <div className="space-y-8">
-          {/* Executive Signal Deck */}
-          <ExecutiveOverview />
+          {/* Internal Signal Deck */}
+          <InternalMarketOverview />
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Left: Workflow Panel */}
@@ -214,7 +214,7 @@ const PriceForecastPage = () => {
                         <div className="absolute inset-0 rounded-full border-4 border-muted opacity-20" />
                         <div className="absolute inset-0 rounded-full border-4 border-t-accent border-r-transparent border-b-transparent border-l-transparent animate-spin" />
                         <div className="absolute inset-0 flex items-center justify-center font-bold text-xl text-accent">
-                          AI
+                          FC
                         </div>
                       </div>
                       <div>
@@ -329,7 +329,7 @@ const PriceForecastPage = () => {
 
             {/* Insights Panel */}
             <div className="space-y-6">
-              <AIExplained
+              <ForecastIntelligence
                 confidence={confidenceScore || 99}
                 summary={forecast?.summary || "Forecast data synchronized from Azure Fabric Lakehouse."}
                 factors={[

@@ -15,8 +15,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 15% 15%;
 
-    /* Primary: Deep Red (Executive decision) */
-    --primary: 350 80% 45%;
+    /* Primary: Intersnack Red (#CC3236) */
+    --primary: 358 61% 50%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary: Cool Grey for hierarchy */
@@ -28,7 +28,7 @@
     --muted-foreground: 215 10% 45%;
 
     /* Accent: Used sparingly */
-    --accent: 350 80% 45%;
+    --accent: 358 61% 50%;
     --accent-foreground: 0 0% 100%;
 
     /* Destructive */
@@ -38,17 +38,16 @@
     /* Borders: Cool Grey */
     --border: 210 15% 90%;
     --input: 210 15% 90%;
-    --ring: 350 80% 45%;
+    --ring: 358 61% 50%;
 
-    /* Radius: 4-8px */
-    --radius: 0.375rem;
+    /* Radius: 12px for modern SaaS feel */
+    --radius: 0.75rem;
 
-    /* Signals */
-    --success: 210 80% 50%;
-    /* Blue for stability/confidence */
-    --warning: 45 90% 55%;
-    /* Light Yellow for attention */
-    /* Red is already defined as destructive/signal */
+    /* Signals - Neutralized to avoid blue/green prohibition */
+    --success: 215 15% 25%;
+    /* Charcoal for stability */
+    --warning: 358 61% 50%;
+    /* Using Red for signal too */
   }
 
   .dark {
@@ -58,20 +57,20 @@
     --card-foreground: 210 20% 98%;
     --popover: 215 20% 12%;
     --popover-foreground: 210 20% 98%;
-    --primary: 350 80% 55%;
+    --primary: 358 61% 60%;
     --primary-foreground: 0 0% 100%;
     --secondary: 215 20% 16%;
     --secondary-foreground: 210 20% 98%;
     --muted: 215 20% 16%;
     --muted-foreground: 215 10% 65%;
-    --accent: 350 80% 55%;
+    --accent: 358 61% 60%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 98%;
     --border: 215 15% 20%;
     --input: 215 15% 20%;
-    --ring: 350 80% 55%;
-    --success: 210 80% 50%;
+    --ring: 358 61% 60%;
+    --success: 210 20% 98%;
     --warning: 45 90% 55%;
   }
 

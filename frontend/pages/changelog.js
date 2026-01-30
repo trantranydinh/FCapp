@@ -6,6 +6,13 @@ import { GitCommit, Tag } from 'lucide-react';
 
 const changes = [
     {
+        version: "v2.1.0",
+        date: "2026-01-29",
+        type: "Performance & UI",
+        title: "Login Optimization & Asset Restructuring",
+        description: "Resolved database timeout issues (ETIMEDOUT) by optimizing auth sync parallelism. Restructured public assets into a unified folder. Verified News Crawler robustness."
+    },
+    {
         version: "v2.0.0",
         date: "2026-01-21",
         type: "Major Release",

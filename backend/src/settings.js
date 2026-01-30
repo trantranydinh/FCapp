@@ -2,22 +2,32 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import fs from "fs";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Define and execute loading immediately
 const loadEnvironment = () => {
-  // Load from root .env with absolute path (backend/src -> backend -> root)
-  // Load from root .env with absolute path (backend/src -> backend -> root)
-  console.log('[Settings] Current Dir:', __dirname);
-  const envPath = path.resolve(__dirname, '../../.env');
-  console.log('[Settings] Resolving .env path to:', envPath);
-  const result = dotenv.config({ path: envPath });
+  // Priority 1: .env.local (Local overrides)
+  const localEnvPath = path.resolve(__dirname, '../../.env.local');
+  if (fs.existsSync(localEnvPath)) {
+    console.log('[Settings] Loading overrides from:', localEnvPath);
+    dotenv.config({ path: localEnvPath });
+  }
 
-  if (result.error) {
-    console.warn('[Settings] Warning: Could not load .env file from:', envPath);
+  // Priority 2: .env (Base configuration)
+  const envPath = path.resolve(__dirname, '../../.env');
+  if (fs.existsSync(envPath)) {
+    console.log('[Settings] Loading defaults from:', envPath);
+    // dotenv will not overwrite existing variables from .env.local
+    dotenv.config({ path: envPath });
+  }
+
+  if (!fs.existsSync(localEnvPath) && !fs.existsSync(envPath)) {
+    console.warn('[Settings] Warning: Neither .env.local nor .env found in root.');
   } else {
-    console.log('[Settings] ✓ Environment loaded from:', envPath);
+    console.log('[Settings] ✓ Environment Configuration Complete');
   }
 };
 

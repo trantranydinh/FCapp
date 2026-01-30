@@ -4,7 +4,7 @@ import { cn } from "../lib/utils";
 const steps = [
     { id: 1, label: "Upload", icon: UploadCloud },
     { id: 2, label: "Preprocess", icon: FileText },
-    { id: 3, label: "AI Analysis", icon: Cpu },
+    { id: 3, label: "Processing", icon: Cpu },
     { id: 4, label: "Evaluate", icon: BarChart },
     { id: 5, label: "Forecast", icon: Zap },
 ];

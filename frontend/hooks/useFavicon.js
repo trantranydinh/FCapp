@@ -14,7 +14,7 @@ import { useEffect, useRef, useCallback } from 'react';
 export const useFavicon = () => {
     const linkRef = useRef(null);
     const canvasRef = useRef(null);
-    const originalHref = useRef('/favicon.ico');
+    const originalHref = useRef('/assets/images/logo-icon.png');
 
     useEffect(() => {
         // 1. Locate or Create Link Tag
@@ -46,7 +46,7 @@ export const useFavicon = () => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         // Base image - ensure this exists in public folder
-        img.src = '/logo_intersnack.png';
+        img.src = '/assets/images/logo-icon.png';
 
         // Fallback or Generic Draw if image fails or for immediate feedback
         const drawShapes = () => {

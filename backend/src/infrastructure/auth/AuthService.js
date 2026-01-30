@@ -128,10 +128,11 @@ class AuthService {
       department: this.getDepartmentFromEmail(email)
     };
 
-    const dbUser = await this.syncUserWithDatabase(userData);
-
-    // 2. Sync with LEGACY Database (INT) - CRITICAL for Parity Tool
-    const legacyId = await this.syncUserWithLegacyTable(userData);
+    // Sync with Databases in parallel
+    const [dbUser, legacyId] = await Promise.all([
+      this.syncUserWithDatabase(userData),
+      this.syncUserWithLegacyTable(userData)
+    ]);
 
     const user = {
       id: dbUser.id || this.stableUserIdFromEmail(email),
@@ -250,8 +251,9 @@ class AuthService {
       throw new Error('Please use your company email (@intersnack.com or @intersnack.com.vn)');
     }
 
-    // Validate password (FIXED PASSWORD FOR DEMO)
-    if (password !== 'Vicc@2025') {
+    // Validate password (FIXED PASSWORD FOR DEMO - Upgrade to Hash in Production)
+    const validPassword = process.env.ADMIN_PASSWORD;
+    if (password !== validPassword) {
       throw new Error('Invalid password');
     }
 
@@ -266,9 +268,11 @@ class AuthService {
       department: this.getDepartmentFromEmail(email)
     };
 
-    // SYNC DBs
-    const dbUser = await this.syncUserWithDatabase(userData);
-    const legacyId = await this.syncUserWithLegacyTable(userData);
+    // SYNC DBs in parallel to reduce wait time if DB is slow or unreachable
+    const [dbUser, legacyId] = await Promise.all([
+      this.syncUserWithDatabase(userData),
+      this.syncUserWithLegacyTable(userData)
+    ]);
 
     const user = {
       id: dbUser.id || this.stableUserIdFromEmail(normalizedEmail),

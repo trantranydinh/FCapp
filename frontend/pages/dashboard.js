@@ -6,7 +6,7 @@ const DashboardPage = () => {
   return (
     <>
       <Head>
-        <title>Command Center | Intersnack Forecast</title>
+        <title>Parity Tool | Intersnack Cashew</title>
       </Head>
       <DashboardLayout title="Parity Tool">
         <div className="space-y-6">
