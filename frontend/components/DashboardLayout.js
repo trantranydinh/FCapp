@@ -28,6 +28,7 @@ import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 import { useAuth } from "./AuthProvider";
 import { useFavicon } from "../hooks/useFavicon";
+import { useSWRConfig } from "swr";
 
 // Define Navigation Structure
 const navSections = [
@@ -45,7 +46,7 @@ const navSections = [
     items: [
       { href: "/price-forecast", label: "Overview", icon: LayoutDashboard },
       { href: "/market-insights", label: "Market Signals", icon: BarChart3 },
-      { href: "/news-watch", label: "News Watch", icon: Newspaper },
+      { href: "/news-watch", label: "News Watch", icon: Newspaper, badge: "Live" },
       { href: "/reports", label: "Decision Support", icon: Lightbulb },
       { type: "subheader", label: "Models & Experiments" }, // Sub-section
       { href: "/decision-tree", label: "Model Logic", icon: Share2 },
@@ -74,7 +75,9 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
   const { user, logout } = useAuth();
   const { setFavicon } = useFavicon();
   const router = useRouter();
+  const { mutate } = useSWRConfig();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -104,15 +107,15 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
         <div className="h-16 flex items-center justify-center border-b border-border bg-secondary shrink-0">
           <div className="flex items-center gap-3">
             <div className="h-8 w-auto flex items-center justify-center">
-              <img src="/logo_intersnack.png" alt="Intersnack" className="h-full w-auto object-contain" />
+              <img src="/assets/images/logo-icon.png" alt="Intersnack" className="h-full w-auto object-contain" />
             </div>
             {!isCollapsed && (
               <div className="flex flex-col animate-in fade-in duration-300">
-                <span className="font-semibold text-sm tracking-tight text-foreground">
-                  FC System
+                <span className="font-semibold text-[10px] leading-tight text-[#1D222C]">
+                  Intersnack Cashew
                 </span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
-                  Executive
+                <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-medium">
+                  Internal System
                 </span>
               </div>
             )}
@@ -175,9 +178,14 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
                       )} />
 
                       {!isCollapsed && (
-                        <span className="text-sm truncate">
-                          {item.label}
-                        </span>
+                        <div className="flex flex-1 items-center justify-between min-w-0">
+                          <span className="text-sm truncate">{item.label}</span>
+                          {item.badge && (
+                            <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-full font-medium border border-emerald-500/20 ml-2">
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </Link>
                   );
@@ -191,10 +199,10 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
         <div className="p-4 border-t border-border bg-secondary shrink-0">
           {!isCollapsed && (
             <div className="mb-4 pl-1 space-y-0.5 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <p className="text-xs font-semibold text-foreground/80">FC System – Executive</p>
+              <p className="text-[10px] font-semibold text-foreground/80">Intersnack Cashew Company</p>
               <div className="text-[10px] text-muted-foreground flex flex-col">
-                <span>Version 1.2.0 · Beta</span>
-                <span className="opacity-70">Last updated: Dec 2025</span>
+                <span>Version 2.1.0 · Beta</span>
+                <span className="opacity-70">Last updated: Jan 2026</span>
               </div>
             </div>
           )}
@@ -241,15 +249,37 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
           {/* Right Controls */}
           <div className="flex items-center gap-4">
             {/* Action Button - Deep Red */}
+
             <Button
               size="sm"
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-sm border border-transparent active:scale-95 transition-transform"
-              onClick={() => {
-                window.location.reload();
+              disabled={isRefreshing}
+              onClick={async () => {
+                setIsRefreshing(true);
+
+                try {
+                  // 1. Route-Specific Background Tasks
+                  if (router.pathname.includes('news-watch')) {
+                    await fetch('/api/v1/dashboard/news-refresh', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ keywords: ['cashew'], limit: 12 })
+                    });
+                  }
+
+                  // 2. Universal Soft Refresh
+                  await mutate(() => true, undefined, { revalidate: true });
+                  await router.replace(router.asPath, undefined, { scroll: false });
+
+                } catch (e) {
+                  console.error("Refresh failed:", e);
+                } finally {
+                  setTimeout(() => setIsRefreshing(false), 500);
+                }
               }}
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh Data
+              <RefreshCw className={cn("w-4 h-4 mr-2", isRefreshing ? "animate-spin" : "")} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
             </Button>
 
             <div className="h-6 w-[1px] bg-border" />
@@ -258,7 +288,7 @@ export default function DashboardLayout({ children, title = "Dashboard" }) {
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
                 <div className="text-sm font-medium text-foreground">{user?.name}</div>
-                <div className="text-[10px] text-muted-foreground uppercase">Executive View</div>
+                <div className="text-[10px] text-muted-foreground uppercase">Internal System View</div>
               </div>
               <div className="h-8 w-8 rounded bg-secondary border border-border flex items-center justify-center text-xs font-bold text-foreground">
                 {getUserInitials()}

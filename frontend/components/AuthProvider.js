@@ -31,15 +31,15 @@ export function AuthProvider({ children }) {
         const user = authService.getCurrentUser();
         const pathname = router.pathname;
 
-        // If on protected route without auth
-        if (!user && (pathname === '/' || pathname.startsWith('/dashboard') || pathname.startsWith('/price-forecast') || pathname.startsWith('/market-insights') || pathname.startsWith('/news-watch') || pathname.startsWith('/lstm-demo'))) {
-          await router.push('/login');
+        // If on protected route without auth (excluding login page /)
+        if (!user && pathname !== '/' && (pathname.startsWith('/dashboard') || pathname.startsWith('/price-forecast') || pathname.startsWith('/market-insights') || pathname.startsWith('/news-watch') || pathname.startsWith('/lstm-demo'))) {
+          await router.push('/');
           return;
         }
 
-        // If on login page while authenticated
-        if (user && pathname === '/login') {
-          await router.push('/');
+        // If on landing/login page (/) while authenticated
+        if (user && pathname === '/') {
+          await router.push('/dashboard');
           return;
         }
       } finally {
@@ -75,8 +75,8 @@ export function useAuth() {
     try {
       const user = await authService.loginWithSSO(email, password);
 
-      // Redirect to home page (section selector)
-      router.replace('/');
+      // Redirect to dashboard page
+      router.replace('/dashboard');
 
       return user;
     } catch (error) {
@@ -90,11 +90,11 @@ export function useAuth() {
       await authService.logout();
 
       // Hard redirect to clear any cached state
-      window.location.href = '/login';
+      window.location.href = '/';
     } catch (error) {
       console.error('Logout error:', error);
       // Force redirect anyway
-      window.location.href = '/login';
+      window.location.href = '/';
     }
   };
 

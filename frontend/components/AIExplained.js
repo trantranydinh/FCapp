@@ -2,7 +2,7 @@ import { Lightbulb, ArrowRight, Zap, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 
-export default function AIExplained({
+export default function ForecastIntelligence({
     confidence = 85,
     factors = [
         { name: "Global Supply Chain", impact: "High", direction: "negative" },
@@ -18,14 +18,14 @@ export default function AIExplained({
                     <div className="p-1.5 rounded-lg bg-accent/10 text-accent">
                         <Zap className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-base font-semibold">AI Forecast Insights</CardTitle>
+                    <CardTitle className="text-base font-semibold">Market Model Context</CardTitle>
                 </div>
             </CardHeader>
 
             <CardContent className="space-y-4">
                 {/* AI Summary */}
                 <div className="p-3 rounded-lg bg-background/50 border border-border/50 text-sm leading-relaxed">
-                    <span className="font-semibold text-primary mr-1">AI Analysis:</span>
+                    <span className="font-semibold text-primary mr-1">Model Summary:</span>
                     {summary}
                 </div>
 

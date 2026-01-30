@@ -47,7 +47,7 @@ const SignalCard = ({ title, value, trend, trendValue, icon: Icon, signalColor, 
     );
 };
 
-export default function ExecutiveOverview() {
+export default function InternalMarketOverview() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -81,7 +81,7 @@ export default function ExecutiveOverview() {
             <div className="flex items-end justify-between">
                 <div>
                     <h2 className="text-lg font-semibold text-foreground">Market Signals</h2>
-                    <p className="text-sm text-muted-foreground">AI-driven market intelligence summary for the current period.</p>
+                    <p className="text-sm text-muted-foreground">Market intelligence summary for the current period.</p>
                 </div>
                 <div className="text-xs text-muted-foreground font-mono uppercase">
                     LAST SYNC: {data?.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '---'}
@@ -125,7 +125,7 @@ export default function ExecutiveOverview() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-4">
-                    <h3 className="text-sm font-medium text-muted-foreground uppercase">Key AI Insights</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase">System Insights</h3>
                     <div className="bg-secondary/30 border border-border rounded-md p-4 space-y-3 min-h-[100px]">
                         {loading ? (
                             <div className="flex items-center justify-center h-full">
@@ -158,7 +158,7 @@ export default function ExecutiveOverview() {
                     <h3 className="text-sm font-medium text-muted-foreground uppercase mb-4">Market Status</h3>
                     <div className="bg-secondary/30 border border-border rounded-md p-4 space-y-4">
                         <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">AI Intelligence</span>
+                            <span className="text-muted-foreground">System Assessment</span>
                             <span className={cn("font-medium", data?.status === 'healthy' ? "text-success" : "text-warning")}>
                                 {data?.status === 'healthy' ? "Active" : "Degraded"}
                             </span>

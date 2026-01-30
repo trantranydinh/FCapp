@@ -2,77 +2,25 @@
  * APPLICATION LAYER: News Orchestrator (Enhanced)
  *
  * Responsibility: Coordinate news data retrieval and AI enhancement
- * Dependencies: Infrastructure services (JSONCache, LLMProvider, NewsCrawler)
+ * Dependencies: Infrastructure services (LLMProvider, NewsCrawler)
  *
  * Features:
  * - Keyword-based news crawling
  * - AI enhancement for news insights
+ * - File-based caching with TTL
  * - Graceful degradation when AI unavailable
  */
 
 import path from 'path';
 import fs from 'fs-extra';
-import Redis from 'ioredis';
 import llmProvider from '../infrastructure/llm/LLMProvider.js';
 import newsCrawler from '../infrastructure/data/NewsCrawler.js';
 import databaseAdapter from '../infrastructure/db/DatabaseAdapter.js';
 import { settings } from '../settings.js';
 
-// Setup Redis with suppression logic
-let redisClient = null;
-let redisAvailable = false;
-let redisErrorLogged = false;
-
-try {
-  const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-  redisClient = new Redis(REDIS_URL, {
-    maxRetriesPerRequest: 1, // Fail fast
-    enableReadyCheck: false, // Don't block
-    lazyConnect: true,
-    retryStrategy: (times) => {
-      if (times > 3) {
-        if (!redisErrorLogged) {
-          console.warn('[NewsOrchestrator] Redis unavailable after max retries. Disabling cache.');
-          redisErrorLogged = true;
-        }
-        redisAvailable = false;
-        return null; // Stop retrying
-      }
-      return Math.min(times * 100, 2000);
-    }
-  });
-
-  redisClient.on('error', (err) => {
-    // Only log distinct errors or once per downtime to avoid spam
-    if (!redisErrorLogged) {
-      console.warn('[NewsOrchestrator] Redis connection warning:', err.message);
-      redisErrorLogged = true;
-    }
-    redisAvailable = false;
-  });
-
-  redisClient.on('connect', () => {
-    if (redisErrorLogged) {
-      console.log('[NewsOrchestrator] Redis re-connected.');
-      redisErrorLogged = false;
-    }
-    redisAvailable = true;
-  });
-
-  // Attempt initial connect but don't await/block module load
-  redisClient.connect().catch(() => { });
-
-} catch (error) {
-  redisAvailable = false;
-}
-
 class NewsOrchestrator {
   constructor() {
     this.newsFilePath = path.resolve(process.cwd(), 'data', 'demo_news.json');
-  }
-
-  isCacheAvailable() {
-    return redisAvailable && redisClient && redisClient.status === 'ready';
   }
 
   /**
@@ -143,17 +91,6 @@ class NewsOrchestrator {
       await fs.writeJson(this.newsFilePath, newsItems, { spaces: 2 });
       console.log(`[NewsOrchestrator] Saved ${newsItems.length} items to ${this.newsFilePath}`);
 
-      // Step 3: Update Redis cache
-      if (this.isCacheAvailable()) {
-        try {
-          await redisClient.setex('news:latest', 900, JSON.stringify(newsItems)); // 15 min TTL
-          await redisClient.set('news:last_crawl_time', new Date().toISOString());
-          console.log('[NewsOrchestrator] Updated Redis cache with fresh data');
-        } catch (redisError) {
-          // Silent fail or low-level warn
-        }
-      }
-
       return newsItems;
 
     } catch (error) {
@@ -168,21 +105,7 @@ class NewsOrchestrator {
    */
   async _loadNewsItems() {
     try {
-      // Level 1: Try Redis cache first (fastest - ~1ms)
-      if (this.isCacheAvailable()) {
-        try {
-          const cached = await redisClient.get('news:latest');
-          if (cached) {
-            const data = JSON.parse(cached);
-            console.log(`[NewsOrchestrator] Serving from Redis cache (${data.length} items)`);
-            return data;
-          }
-        } catch (redisError) {
-          // Ignore read errors, fall through
-        }
-      }
-
-      // Level 2: Try file cache (slower - ~5-10ms)
+      // Try file cache
       const exists = await fs.pathExists(this.newsFilePath);
 
       if (exists) {
@@ -198,17 +121,6 @@ class NewsOrchestrator {
           const data = await fs.readJson(this.newsFilePath);
           if (Array.isArray(data) && data.length > 0) {
             console.log(`[NewsOrchestrator] Serving from file cache (age: ${Math.round(ageMinutes)}m)`);
-
-            // Update Redis cache for next time
-            if (this.isCacheAvailable()) {
-              try {
-                await redisClient.setex('news:latest', 900, JSON.stringify(data)); // 15 min TTL
-                console.log('[NewsOrchestrator] Updated Redis cache from file');
-              } catch (redisError) {
-                // Ignore
-              }
-            }
-
             return data;
           }
         } else {

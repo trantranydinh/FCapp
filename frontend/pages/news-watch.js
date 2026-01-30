@@ -77,8 +77,8 @@ const NewsWatchPage = () => {
       <DashboardLayout title="Market Insights">
         <div className="space-y-10 max-w-[1600px] mx-auto">
           {/* 1. Editorial Header */}
-          <div className="flex flex-col md:flex-row justify-between items-end border-b border-border pb-6 gap-6">
-            <div className="space-y-3 max-w-2xl">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-border pb-6 gap-6">
+            <div className="space-y-3 max-w-4xl">
               <h1 className="text-4xl font-light tracking-tight text-foreground">
                 Market <span className="font-semibold text-primary">Beat</span>
               </h1>
@@ -90,27 +90,7 @@ const NewsWatchPage = () => {
             {/* Filter and Search Controls */}
             <div className="flex flex-col items-end gap-3">
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    setIsRefreshing(true);
-                    try {
-                      await fetch('/api/v1/dashboard/news-refresh', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ keywords: ['cashew'], limit: 30 })
-                      });
-                      mutate(`/api/v1/dashboard/news-summary?limit=${limit}&page=${page}`);
-                    } catch (e) { console.error(e); }
-                    finally { setIsRefreshing(false); }
-                  }}
-                  disabled={isRefreshing}
-                  className="h-9 px-3 text-xs"
-                >
-                  <Loader2 className={cn("h-3.5 w-3.5 mr-2", isRefreshing ? "animate-spin" : "")} />
-                  Refresh Fresh Data
-                </Button>
+
 
                 {/* Search Form */}
                 <form onSubmit={handleSearch} className="flex items-center gap-2">

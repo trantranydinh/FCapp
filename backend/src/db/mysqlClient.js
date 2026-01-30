@@ -16,7 +16,8 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    ssl: settings.dbSSL ? { rejectUnauthorized: false } : undefined
+    ssl: settings.dbSSL ? { rejectUnauthorized: false } : undefined,
+    connectTimeout: 5000 // 5 seconds timeout before failing
 });
 
 // Test connection

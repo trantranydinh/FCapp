@@ -5,17 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Button } from "../components/ui/button";
 import { FileText, Download, Loader2 } from "lucide-react";
 import { api } from "../lib/apiClient";
- 
+
 const ReportsPage = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [reportUrl, setReportUrl] = useState(null);
     const [reportHtml, setReportHtml] = useState(null);
- 
+
     const generateReport = async () => {
         setIsGenerating(true);
         setReportUrl(null);
         setReportHtml(null);
- 
+
         try {
             // Call API to generate report
             // Note: In a real app, we would pass actual data here
@@ -30,23 +30,23 @@ const ReportsPage = () => {
                 recommendation: "Increase inventory positions",
                 riskRegion: "West Africa"
             });
- 
+
             if (response.data.success) {
                 // For demo purposes, we'll fetch the generated file content
                 // In production, this would be a download link
                 const fileName = response.data.data.fileName;
- 
+
                 // Construct URL to view the report (served via static middleware if configured,
                 // or we can just render the HTML directly if the API returned it)
                 // For this demo, let's simulate by fetching the content if possible,
                 // or just showing a success message.
- 
+
                 // Since we don't have a direct "get report content" API, we will just show the success state
                 // and a mock "Download" button.
- 
+
                 // However, to make it "viewable in web", let's try to render a preview iframe
                 // We can use the data we sent to render a client-side preview as well.
- 
+
                 setReportUrl(fileName);
             }
         } catch (error) {
@@ -56,7 +56,7 @@ const ReportsPage = () => {
             setIsGenerating(false);
         }
     };
- 
+
     return (
         <>
             <Head>
@@ -71,7 +71,7 @@ const ReportsPage = () => {
                                 Generate Market Report
                             </CardTitle>
                             <CardDescription>
-                                Create a professional PDF-style report based on the latest market data and AI analysis.
+                                Create a professional report based on the latest market data and standardized model results.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -82,9 +82,9 @@ const ReportsPage = () => {
                                     </div>
                                     <h3 className="text-lg font-semibold">Monthly Market Intelligence Report</h3>
                                     <p className="text-sm text-muted-foreground">
-                                        Includes executive summary, price forecast charts, key market drivers, and strategic recommendations.
+                                        Includes system summary, price forecast charts, key market drivers, and strategic considerations.
                                     </p>
- 
+
                                     <Button
                                         onClick={generateReport}
                                         disabled={isGenerating}
@@ -106,7 +106,7 @@ const ReportsPage = () => {
                             </div>
                         </CardContent>
                     </Card>
- 
+
                     {/* Report Preview Section */}
                     {reportUrl && (
                         <Card className="overflow-hidden">
@@ -126,19 +126,17 @@ const ReportsPage = () => {
                                     <div className="max-w-3xl mx-auto bg-white shadow-sm border p-8 min-h-[800px] text-slate-800">
                                         {/* Header */}
                                         <div className="border-b-2 border-slate-900 pb-4 mb-8 flex justify-between items-end">
-                                            <div className="text-2xl font-bold text-slate-900 uppercase tracking-wider">
-                                                Cashew<span className="text-red-600">AI</span> Intelligence
-                                            </div>
+                                            Intersnack Cashew Intelligence
                                             <div className="text-right text-xs text-slate-500">
                                                 <div>Date: {new Date().toLocaleDateString()}</div>
                                                 <div>Report ID: {reportUrl.replace('.html', '')}</div>
                                                 <div>Confidential & Proprietary</div>
                                             </div>
                                         </div>
- 
+
                                         {/* Executive Summary */}
                                         <div className="mb-8">
-                                            <h2 className="text-lg font-bold text-red-600 uppercase mb-3 border-l-4 border-red-600 pl-2">Executive Summary</h2>
+                                            <h2 className="text-lg font-bold text-red-600 uppercase mb-3 border-l-4 border-red-600 pl-2">System Summary</h2>
                                             <div className="bg-slate-50 p-4 rounded text-sm space-y-2">
                                                 <div className="flex gap-2">
                                                     <span className="text-red-600 font-bold">■</span>
@@ -146,7 +144,7 @@ const ReportsPage = () => {
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <span className="text-red-600 font-bold">■</span>
-                                                    <p><strong>Price Forecast:</strong> AI models predict a price movement towards <strong>$152.50</strong> in the next 30 days.</p>
+                                                    <p><strong>Price Forecast:</strong> System models project a price movement towards <strong>$152.50</strong> in the next 30 days.</p>
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <span className="text-red-600 font-bold">■</span>
@@ -154,7 +152,7 @@ const ReportsPage = () => {
                                                 </div>
                                             </div>
                                         </div>
- 
+
                                         {/* Metrics */}
                                         <div className="mb-8">
                                             <h2 className="text-lg font-bold text-red-600 uppercase mb-3 border-l-4 border-red-600 pl-2">Key Market Indicators</h2>
@@ -170,13 +168,13 @@ const ReportsPage = () => {
                                                     <div className="text-xs text-slate-400">Risk Level</div>
                                                 </div>
                                                 <div className="border p-3 text-center">
-                                                    <div className="text-xs text-slate-500 uppercase">AI Confidence</div>
+                                                    <div className="text-xs text-slate-500 uppercase">Model Confidence</div>
                                                     <div className="text-2xl font-bold text-slate-900 my-1">87%</div>
                                                     <div className="text-xs text-slate-400">Model Accuracy</div>
                                                 </div>
                                             </div>
                                         </div>
- 
+
                                         {/* Strategic Implications */}
                                         <div className="mb-8">
                                             <h2 className="text-lg font-bold text-red-600 uppercase mb-3 border-l-4 border-red-600 pl-2">Strategic Implications</h2>
@@ -188,10 +186,10 @@ const ReportsPage = () => {
                                                 </ul>
                                             </div>
                                         </div>
- 
+
                                         {/* Footer */}
                                         <div className="border-t pt-4 mt-12 flex justify-between text-[10px] text-slate-400">
-                                            <div>Generated by Cashew Forecast AI System</div>
+                                            <div>Generated by Intersnack Cashew Intelligence System</div>
                                             <div>Page 1 of 1</div>
                                         </div>
                                     </div>
@@ -204,5 +202,5 @@ const ReportsPage = () => {
         </>
     );
 };
- 
+
 export default ReportsPage;
